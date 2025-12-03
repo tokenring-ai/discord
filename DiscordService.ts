@@ -1,3 +1,4 @@
+import {AgentEventState} from "@tokenring-ai/agent/state/agentEventState";
 import {Client, GatewayIntentBits, Message, TextChannel} from 'discord.js';
 import TokenRingApp from "@tokenring-ai/app";
 import {Agent, AgentManager} from "@tokenring-ai/agent";
@@ -62,28 +63,50 @@ export default class DiscordService implements TokenRingService {
         return;
       }
 
-      const cleanText = isMention 
+      const cleanText = isMention
         ? message.content.replace(/<@!?\d+>/g, '').trim()
         : message.content.trim();
 
       if (!cleanText) return;
 
       const agent = await this.getOrCreateAgentForUser(userId);
-      let response = "";
 
-      for await (const event of agent.events(new AbortController().signal)) {
-        if (event.type === 'output.chat') {
-          response += event.data.content;
-        } else if (event.type === 'output.system') {
-          response += `\n[${event.data.level.toUpperCase()}]: ${event.data.message}\n`;
-        } else if (event.type === 'state.idle') {
-          if (response) {
-            await message.reply(response.slice(0, 2000));
-            break;
+      // Wait for agent to be idle before sending new message
+      const initialState = await agent.waitForState(AgentEventState, (state) => state.idle);
+      const eventCursor = initialState.getEventCursorFromCurrentPosition();
+
+      // Send the message to the agent
+      const requestId = agent.handleInput({message: cleanText});
+
+      // Subscribe to agent events to process the response
+      const unsubscribe = agent.subscribeState(AgentEventState, (state) => {
+        for (const event of state.yieldEventsByCursor(eventCursor)) {
+          switch (event.type) {
+            case 'output.chat':
+              this.handleChatOutput(message, event.data.content);
+              break;
+            case 'output.system':
+              this.handleSystemOutput(message, event.data.message, event.data.level);
+              break;
+            case 'input.handled':
+              if (event.data.requestId === requestId) {
+                unsubscribe();
+                // If no response was sent, send a default message
+                if (!this.lastResponseSent) {
+                  message.reply("No response received from agent.");
+                }
+              }
+              break;
           }
-          await agent.handleInput({message: cleanText});
-          response = "";
         }
+      });
+
+      // Set timeout for the response
+      if (agent.config.maxRunTime > 0) {
+        setTimeout(() => {
+          unsubscribe();
+          message.reply(`Agent timed out after ${agent.config.maxRunTime} seconds.`);
+        }, agent.config.maxRunTime * 1000);
       }
     });
 
@@ -95,6 +118,40 @@ export default class DiscordService implements TokenRingService {
         await (channel as TextChannel).send("Discord bot is online!");
       }
     }
+  }
+
+  private lastResponseSent = false;
+
+  private async handleChatOutput(message: Message, content: string): Promise<void> {
+    // Accumulate chat content and send when complete
+    this.lastResponseSent = true;
+    // Discord has a 2000 character limit per message
+    const chunks = this.chunkText(content, 2000);
+    for (const chunk of chunks) {
+      await message.reply(chunk);
+    }
+  }
+
+  private async handleSystemOutput(message: Message, messageText: string, level: string): Promise<void> {
+    const formattedMessage = `[${level.toUpperCase()}]: ${messageText}`;
+    await message.reply(formattedMessage);
+  }
+
+  private chunkText(text: string, maxLength: number): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    for (const line of text.split('\n')) {
+      if (currentChunk.length + line.length + 1 <= maxLength) {
+        currentChunk += (currentChunk ? '\n' : '') + line;
+      } else {
+        if (currentChunk) chunks.push(currentChunk);
+        currentChunk = line;
+      }
+    }
+
+    if (currentChunk) chunks.push(currentChunk);
+    return chunks;
   }
 
   async stop(): Promise<void> {
