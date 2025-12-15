@@ -1,4 +1,5 @@
 import {AgentEventState} from "@tokenring-ai/agent/state/agentEventState";
+import waitForAbort from "@tokenring-ai/utility/promise/waitForAbort";
 import {Client, GatewayIntentBits, Message, TextChannel} from 'discord.js';
 import TokenRingApp from "@tokenring-ai/app";
 import {Agent, AgentManager} from "@tokenring-ai/agent";
@@ -37,7 +38,7 @@ export default class DiscordService implements TokenRingService {
     this.defaultAgentType = defaultAgentType || "teamLeader";
   }
 
-  async start(): Promise<void> {
+  async run(signal: AbortSignal): Promise<void> {
     this.running = true;
 
     this.client = new Client({
@@ -118,8 +119,21 @@ export default class DiscordService implements TokenRingService {
         await (channel as TextChannel).send("Discord bot is online!");
       }
     }
-  }
+    return waitForAbort(signal, async (ev) => {
+      const agentManager = this.app.requireService(AgentManager);
+      this.running = false;
 
+      for (const [userId, agent] of this.userAgents.entries()) {
+        await agentManager.deleteAgent(agent);
+      }
+      this.userAgents.clear();
+
+      if (this.client) {
+        await this.client.destroy();
+        this.client = null;
+      }
+    });
+  }
   private lastResponseSent = false;
 
   private async handleChatOutput(message: Message, content: string): Promise<void> {
@@ -154,20 +168,7 @@ export default class DiscordService implements TokenRingService {
     return chunks;
   }
 
-  async stop(): Promise<void> {
-    const agentManager = this.app.requireService(AgentManager);
-    this.running = false;
 
-    for (const [userId, agent] of this.userAgents.entries()) {
-      await agentManager.deleteAgent(agent);
-    }
-    this.userAgents.clear();
-
-    if (this.client) {
-      await this.client.destroy();
-      this.client = null;
-    }
-  }
 
   private async getOrCreateAgentForUser(userId: string): Promise<Agent> {
     const agentManager = this.app.requireService(AgentManager);
