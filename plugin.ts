@@ -15,4 +15,4 @@ export default {
       app.addServices(new DiscordService(app, discordConfig));
     }
   },
-} as TokenRingPlugin;
+} satisfies TokenRingPlugin;
