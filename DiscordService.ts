@@ -84,10 +84,16 @@ export default class DiscordService implements TokenRingService {
         for (const event of state.yieldEventsByCursor(eventCursor)) {
           switch (event.type) {
             case 'output.chat':
-              this.handleChatOutput(message, event.content);
+              this.handleChatOutput(message, event.message);
               break;
-            case 'output.system':
-              this.handleSystemOutput(message, event.message, event.level);
+            case 'output.info':
+              this.handleSystemOutput(message, event.message, 'info');
+              break;
+            case 'output.warning':
+              this.handleSystemOutput(message, event.message, 'warning');
+              break;
+            case 'output.error':
+              this.handleSystemOutput(message, event.message, 'error');
               break;
             case 'input.handled':
               if (event.requestId === requestId) {
