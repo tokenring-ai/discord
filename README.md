@@ -15,11 +15,14 @@ This package integrates Discord with TokenRing agents, enabling natural conversa
 - **Event-Driven Communication**: Handles agent events and sends responses back to Discord
 - **Automatic Agent Management**: Creates and manages agents for each user automatically
 - **Plugin Architecture**: Automatically integrates with TokenRing applications
+- **State Preservation**: Maintains agent state and conversation history across sessions
+- **Timeout Handling**: Configurable response timeouts with automatic agent cleanup
+- **Message Formatting**: System messages with proper formatting (info, warning, error levels)
 
 ## Installation
 
 ```bash
-npm install @tokenring-ai/discord
+bun install @tokenring-ai/discord
 # or
 bun add @tokenring-ai/discord
 ```
@@ -31,7 +34,8 @@ bun add @tokenring-ai/discord
   - Read Messages/View Channels
   - Send Messages
   - Read Message History
-- Bot must have Message Content Intent enabled
+  - Message Content Intent (required for reading message content)
+- Bot must have Message Content Intent enabled in Discord Developer Portal
 
 ## Setup
 
@@ -141,6 +145,19 @@ interface DiscordServiceConfig {
 }
 ```
 
+### DiscordServiceConfigSchema
+
+Zod schema for configuration validation.
+
+```typescript
+export const DiscordServiceConfigSchema = z.object({
+  botToken: z.string().min(1, "Bot token is required"),
+  channelId: z.string().optional(),
+  authorizedUserIds: z.array(z.string()).optional(),
+  defaultAgentType: z.string().optional()
+});
+```
+
 ### Exports
 
 ```typescript
@@ -156,6 +173,18 @@ export { DiscordServiceConfigSchema } from "./DiscordService.ts";
 - **Mention in channel**: `@BotName what is the weather today?`
 - **Direct message**: Send a message directly to the bot
 
+### Environment Variables
+
+```bash
+# Required
+DISCORD_BOT_TOKEN=your-bot-token-here
+
+# Optional
+DISCORD_CHANNEL_ID=123456789012345678        # For startup announcements
+DISCORD_AUTHORIZED_USERS=123456789012345678,987654321098765432  # Comma-separated list
+DISCORD_DEFAULT_AGENT_TYPE=teamLeader        # Override default agent type
+```
+
 ### Advanced Configuration
 
 ```typescript
@@ -163,14 +192,15 @@ export { DiscordServiceConfigSchema } from "./DiscordService.ts";
 DISCORD_BOT_TOKEN=your-bot-token-here
 DISCORD_CHANNEL_ID=123456789012345678        # Optional for startup announcements
 DISCORD_AUTHORIZED_USERS=123456789012345678,987654321098765432  # Optional comma-separated list
+DISCORD_DEFAULT_AGENT_TYPE=teamLeader        # Optional: defaults to "teamLeader"
 ```
 
 ## Dependencies
 
-- `discord.js` ^14.17.3 - Discord API library
-- `@tokenring-ai/chat` ^0.2.0 - TokenRing chat functionality
-- `@tokenring-ai/agent` ^0.2.0 - TokenRing agent system
+- `discord.js` ^14.25.1 - Discord API library
 - `@tokenring-ai/app` ^0.2.0 - TokenRing application framework
+- `@tokenring-ai/agent` ^0.2.0 - TokenRing agent system
+- `@tokenring-ai/chat` ^0.2.0 - TokenRing chat functionality
 - `zod` ^4.1.13 - Schema validation
 
 ## Notes
@@ -180,6 +210,7 @@ DISCORD_AUTHORIZED_USERS=123456789012345678,987654321098765432  # Optional comma
 - **Cleanup**: Agents are automatically cleaned up when the service stops
 - **Authorization**: If `authorizedUserIds` is empty, all users can interact. Set a list to restrict access
 - **Message Length**: Responses are truncated to 2000 characters (Discord limit)
+- **Timeout Handling**: Agents have configurable timeouts that trigger automatic cleanup
 - **Plugin System**: Designed to work seamlessly with TokenRing's plugin architecture
 
 ## Troubleshooting
@@ -189,6 +220,7 @@ DISCORD_AUTHORIZED_USERS=123456789012345678,987654321098765432  # Optional comma
 1. **Bot not responding**: Ensure Message Content Intent is enabled in Discord Developer Portal
 2. **"Not authorized" message**: Add your user ID to `authorizedUserIds` or remove the restriction
 3. **Bot offline**: Check that the bot token is valid and the bot is invited to your server
+4. **Agent timeouts**: Verify the `maxRunTime` setting in your agent configuration if using custom agent types
 
 ## License
 
