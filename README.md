@@ -18,6 +18,8 @@ This package integrates Discord with TokenRing agents, enabling natural conversa
 - **State Preservation**: Maintains agent state and conversation history across sessions
 - **Timeout Handling**: Configurable response timeouts with automatic agent cleanup
 - **Message Formatting**: System messages with proper formatting (info, warning, error levels)
+- **Multiple Output Types**: Supports chat messages, info messages, warnings, and error messages
+- **Message Chunking**: Automatically splits long messages to respect Discord's 2000 character limit
 
 ## Installation
 
@@ -195,6 +197,25 @@ DISCORD_AUTHORIZED_USERS=123456789012345678,987654321098765432  # Optional comma
 DISCORD_DEFAULT_AGENT_TYPE=teamLeader        # Optional: defaults to "teamLeader"
 ```
 
+## Event System Integration
+
+The Discord service handles multiple event types from the agent system:
+
+### Event Types
+
+- `output.chat`: Regular chat messages from the agent
+- `output.info`: Informational messages
+- `output.warning`: Warning messages
+- `output.error`: Error messages
+- `input.handled`: Indicates that the agent has finished processing the input
+
+### Message Formatting
+
+The service formats messages differently based on type:
+
+- **Chat messages**: Sent as normal Discord messages
+- **System messages**: Formatted as `[TYPE]: message` where TYPE is INFO, WARNING, or ERROR
+
 ## Dependencies
 
 - `discord.js` ^14.25.1 - Discord API library
@@ -209,9 +230,10 @@ DISCORD_DEFAULT_AGENT_TYPE=teamLeader        # Optional: defaults to "teamLeader
 - **User Agents**: Each user's agent maintains independent conversation state
 - **Cleanup**: Agents are automatically cleaned up when the service stops
 - **Authorization**: If `authorizedUserIds` is empty, all users can interact. Set a list to restrict access
-- **Message Length**: Responses are truncated to 2000 characters (Discord limit)
+- **Message Length**: Responses are truncated to 2000 characters (Discord limit) with automatic chunking
 - **Timeout Handling**: Agents have configurable timeouts that trigger automatic cleanup
 - **Plugin System**: Designed to work seamlessly with TokenRing's plugin architecture
+- **Multiple Output Types**: Supports different message types for better user experience
 
 ## Troubleshooting
 
@@ -221,6 +243,7 @@ DISCORD_DEFAULT_AGENT_TYPE=teamLeader        # Optional: defaults to "teamLeader
 2. **"Not authorized" message**: Add your user ID to `authorizedUserIds` or remove the restriction
 3. **Bot offline**: Check that the bot token is valid and the bot is invited to your server
 4. **Agent timeouts**: Verify the `maxRunTime` setting in your agent configuration if using custom agent types
+5. **Long messages not sent**: The service automatically chunks messages to respect Discord's character limit
 
 ## License
 
