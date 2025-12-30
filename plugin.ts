@@ -5,17 +5,15 @@ import packageJSON from './package.json' with {type: 'json'};
 
 const packageConfigSchema = z.object({
   discord: DiscordServiceConfigSchema.optional(),
-});
+}).default({});
 
 export default {
   name: packageJSON.name,
   version: packageJSON.version,
   description: packageJSON.description,
   install(app, config) {
-    const discordConfig = app.getConfigSlice("discord", DiscordServiceConfigSchema.optional());
-
-    if (discordConfig) {
-      app.addServices(new DiscordService(app, discordConfig));
+    if (config.discord) {
+      app.addServices(new DiscordService(app, config.discord));
     }
   },
   config: packageConfigSchema
