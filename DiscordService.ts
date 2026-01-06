@@ -1,4 +1,5 @@
 import {AgentEventState} from "@tokenring-ai/agent/state/agentEventState";
+import {AgentExecutionState} from "@tokenring-ai/agent/state/agentExecutionState";
 import waitForAbort from "@tokenring-ai/utility/promise/waitForAbort";
 import {Client, GatewayIntentBits, Message, TextChannel} from 'discord.js';
 import TokenRingApp from "@tokenring-ai/app";
@@ -73,8 +74,8 @@ export default class DiscordService implements TokenRingService {
       const agent = await this.getOrCreateAgentForUser(userId);
 
       // Wait for agent to be idle before sending new message
-      const initialState = await agent.waitForState(AgentEventState, (state) => state.idle);
-      const eventCursor = initialState.getEventCursorFromCurrentPosition();
+      await agent.waitForState(AgentExecutionState, (state) => state.idle);
+      const eventCursor = agent.getState(AgentEventState).getEventCursorFromCurrentPosition();
 
       // Send the message to the agent
       const requestId = agent.handleInput({message: cleanText});
