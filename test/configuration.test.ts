@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import {describe, expect, it} from 'vitest';
 
-import { DiscordServiceConfigSchema, DiscordServiceConfig } from '../DiscordService';
+import {DiscordServiceConfig, DiscordServiceConfigSchema} from '../DiscordService';
 
 describe('Discord Service Configuration', () => {
   describe('DiscordServiceConfigSchema', () => {
