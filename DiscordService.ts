@@ -9,9 +9,9 @@ import {z} from "zod";
 
 export const DiscordServiceConfigSchema = z.object({
   botToken: z.string().min(1, "Bot token is required"),
-  channelId: z.string().optional(),
-  authorizedUserIds: z.array(z.string()).optional(),
-  defaultAgentType: z.string().optional()
+  channelId: z.string(),
+  authorizedUserIds: z.array(z.string()),
+  defaultAgentType: z.string()
 });
 
 export type DiscordServiceConfig = z.infer<typeof DiscordServiceConfigSchema>;
@@ -20,23 +20,10 @@ export default class DiscordService implements TokenRingService {
   name = "DiscordService";
   description = "Provides a Discord bot for interacting with TokenRing agents.";
   private running = false;
-  private readonly botToken: string;
-  private readonly channelId?: string;
-  private authorizedUserIds: string[] = [];
-  private readonly defaultAgentType: string;
   private client: Client | null = null;
-  private app: TokenRingApp;
   private userAgents = new Map<string, Agent>();
 
-  constructor(app: TokenRingApp, {botToken, channelId, authorizedUserIds, defaultAgentType}: DiscordServiceConfig) {
-    if (!botToken) {
-      throw new Error("DiscordService requires a botToken.");
-    }
-    this.app = app;
-    this.botToken = botToken;
-    this.channelId = channelId;
-    this.authorizedUserIds = authorizedUserIds || [];
-    this.defaultAgentType = defaultAgentType || "teamLeader";
+  constructor(private readonly app: TokenRingApp, private readonly options: DiscordServiceConfig) {
   }
 
   async run(signal: AbortSignal): Promise<void> {
@@ -60,7 +47,7 @@ export default class DiscordService implements TokenRingService {
 
       if (!isMention && !isDM) return;
 
-      if (this.authorizedUserIds.length > 0 && !this.authorizedUserIds.includes(userId)) {
+      if (this.options.authorizedUserIds.length > 0 && !this.options.authorizedUserIds.includes(userId)) {
         await message.reply("Sorry, you are not authorized to use this bot.");
         return;
       }
@@ -118,10 +105,10 @@ export default class DiscordService implements TokenRingService {
       }
     });
 
-    await this.client.login(this.botToken);
+    await this.client.login(this.options.botToken);
 
-    if (this.channelId) {
-      const channel = await this.client.channels.fetch(this.channelId);
+    if (this.options.channelId) {
+      const channel = await this.client.channels.fetch(this.options.channelId);
       if (channel?.isTextBased()) {
         await (channel as TextChannel).send("Discord bot is online!");
       }
@@ -180,7 +167,7 @@ export default class DiscordService implements TokenRingService {
   private async getOrCreateAgentForUser(userId: string): Promise<Agent> {
     const agentManager = this.app.requireService(AgentManager);
     if (!this.userAgents.has(userId)) {
-      const agent = await agentManager.spawnAgent({ agentType: this.defaultAgentType, headless: false });
+      const agent = await agentManager.spawnAgent({agentType: this.options.defaultAgentType, headless: false});
       this.userAgents.set(userId, agent);
     }
     return this.userAgents.get(userId)!;
