@@ -40,11 +40,12 @@ bun add @tokenring-ai/discord
    - Select permissions: `Send Messages`, `Read Messages/View Channels`, `Read Message History`
    - Use generated URL to invite bot to your server
 
-4. **Get Channel ID** (optional):
+4. **Get Channel ID** (Required):
    - Enable Developer Mode in Discord (User Settings > Advanced)
    - Right-click channel and select "Copy ID"
+   - This channel will receive the startup announcement message
 
-5. **Get User IDs** (optional):
+5. **Get User IDs** (Required):
    - Right-click user and select "Copy ID"
 
 ## Configuration
@@ -68,9 +69,9 @@ const app = new TokenRingApp({
 app.config({
   discord: {
     botToken: process.env.DISCORD_BOT_TOKEN!,
-    channelId: process.env.DISCORD_CHANNEL_ID, // Optional
-    authorizedUserIds: ['123456789012345678', '987654321098765432'], // Optional
-    defaultAgentType: 'teamLeader' // Optional, defaults to "teamLeader"
+    channelId: process.env.DISCORD_CHANNEL_ID!,
+    authorizedUserIds: ['123456789012345678', '987654321098765432'],
+    defaultAgentType: 'teamLeader'
   }
 });
 ```
@@ -87,9 +88,9 @@ const app = new TokenRingApp({
 
 const discordService = new DiscordService(app, {
   botToken: process.env.DISCORD_BOT_TOKEN!,
-  channelId: process.env.DISCORD_CHANNEL_ID, // Optional
-  authorizedUserIds: ['123456789012345678'], // Optional
-  defaultAgentType: 'teamLeader' // Optional, defaults to "teamLeader"
+  channelId: process.env.DISCORD_CHANNEL_ID!,
+  authorizedUserIds: ['123456789012345678'],
+  defaultAgentType: 'teamLeader'
 });
 
 // Add service to the app
@@ -115,9 +116,9 @@ import { z } from "zod";
 
 const DiscordServiceConfigSchema = z.object({
   botToken: z.string().min(1, "Bot token is required"),
-  channelId: z.string().optional(),
-  authorizedUserIds: z.array(z.string()).optional(),
-  defaultAgentType: z.string().optional()
+  channelId: z.string().min(1, "Channel ID is required"),
+  authorizedUserIds: z.array(z.string().min(1), "Authorized user IDs are required"),
+  defaultAgentType: z.string().min(1, "Default agent type is required")
 });
 ```
 
@@ -126,20 +127,18 @@ const DiscordServiceConfigSchema = z.object({
 | Option | Type | Required | Default | Description |
 |--------|------|----------|---------|-------------|
 | `botToken` | `string` | Yes | - | Discord bot token from Discord Developer Portal |
-| `channelId` | `string` | No | - | Optional channel ID for startup announcement message |
-| `authorizedUserIds` | `string[]` | No | `[]` | List of user IDs authorized to interact with the bot |
-| `defaultAgentType` | `string` | No | `"teamLeader"` | Default agent type to spawn for users |
+| `channelId` | `string` | Yes | - | Channel ID for startup announcement message |
+| `authorizedUserIds` | `string[]` | Yes | - | List of user IDs authorized to interact with the bot |
+| `defaultAgentType` | `string` | Yes | - | Default agent type to spawn for users |
 
 ### Environment Variables
 
 ```bash
 # Required
 DISCORD_BOT_TOKEN=your-bot-token-here
-
-# Optional
-DISCORD_CHANNEL_ID=123456789012345678        # For startup announcements
+DISCORD_CHANNEL_ID=123456789012345678        # Channel ID for startup announcement
 DISCORD_AUTHORIZED_USERS=123456789012345678,987654321098765432  # Comma-separated list
-DISCORD_DEFAULT_AGENT_TYPE=teamLeader        # Override default agent type
+DISCORD_DEFAULT_AGENT_TYPE=teamLeader        # Default agent type
 ```
 
 ## API Reference
@@ -156,22 +155,36 @@ constructor(app: TokenRingApp, config: DiscordServiceConfig)
 
 **Parameters:**
 - `app`: TokenRingApp instance
-- `config`: DiscordServiceConfig object
+- `config`: DiscordServiceConfig object (all fields required)
+
+#### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | `string` | Service name, always "DiscordService" |
+| `description` | `string` | Service description |
+| `running` | `boolean` | Indicates if the service is currently running |
+| `client` | `Client \| null` | Discord.js client instance |
+| `userAgents` | `Map<string, Agent>` | Map of user IDs to their associated agents |
 
 #### Methods
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `run` | `run(signal: AbortSignal): Promise<void>` | Start the Discord bot and begin listening for messages. The service will automatically handle cleanup when the signal is aborted. |
+| `handleChatOutput` | `handleChatOutput(message: Message, content: string): Promise<void>` | Formats and sends chat messages to Discord, splitting long messages into chunks to respect Discord's character limits. |
+| `handleSystemOutput` | `handleSystemOutput(message: Message, messageText: string, level: string): Promise<void>` | Formats system messages (info, warning, error) with appropriate labels. |
+| `chunkText` | `chunkText(text: string, maxLength: number): string[]` | Splits text into chunks of specified maximum length. |
+| `getOrCreateAgentForUser` | `getOrCreateAgentForUser(userId: string): Promise<Agent>` | Gets or creates an agent for the specified user. |
 
 ### DiscordServiceConfig
 
 ```typescript
 type DiscordServiceConfig = {
   botToken: string;
-  channelId?: string;
-  authorizedUserIds?: string[];
-  defaultAgentType?: string;
+  channelId: string;
+  authorizedUserIds: string[];
+  defaultAgentType: string;
 };
 ```
 
@@ -180,9 +193,9 @@ type DiscordServiceConfig = {
 ```typescript
 export const DiscordServiceConfigSchema = z.object({
   botToken: z.string().min(1, "Bot token is required"),
-  channelId: z.string().optional(),
-  authorizedUserIds: z.array(z.string()).optional(),
-  defaultAgentType: z.string().optional()
+  channelId: z.string().min(1, "Channel ID is required"),
+  authorizedUserIds: z.array(z.string().min(1), "Authorized user IDs are required"),
+  defaultAgentType: z.string().min(1, "Default agent type is required")
 });
 ```
 
@@ -220,7 +233,7 @@ The service formats messages differently based on type:
 - **Per-User Agents**: Each Discord user gets a dedicated agent with persistent chat context
 - **@Mentions**: Respond to mentions in channels with intelligent AI responses
 - **Direct Messages**: Private conversations with the bot in your DMs
-- **Authorization**: Optional user whitelist for restricted access
+- **Authorization**: Restricts access to a list of authorized user IDs
 - **Event-Driven Communication**: Handles agent events and sends responses back to Discord
 - **Automatic Agent Management**: Creates and manages agents for each user automatically
 - **Timeout Handling**: Configurable response timeouts with automatic cleanup
@@ -233,9 +246,10 @@ The service formats messages differently based on type:
 - **Message Content Intent**: Must be enabled in Discord Developer Portal for the bot to read message content
 - **User Agents**: Each user's agent maintains independent conversation state
 - **Cleanup**: Agents are automatically cleaned up when the service stops
-- **Authorization**: If `authorizedUserIds` is empty, all users can interact. Set a list to restrict access
+- **Authorization**: Only users in the `authorizedUserIds` list can interact with the bot
 - **Message Length**: Responses are truncated to 2000 characters (Discord limit) with automatic chunking
 - **Timeout Handling**: Agents have configurable timeouts via `agent.config.maxRunTime`
+- **Startup Announcement**: Bot sends "Discord bot is online!" message to the configured channel on startup
 - **Plugin System**: Designed to work seamlessly with TokenRing's plugin architecture
 
 ## Troubleshooting
@@ -243,10 +257,11 @@ The service formats messages differently based on type:
 ### Common Issues
 
 1. **Bot not responding**: Ensure Message Content Intent is enabled in Discord Developer Portal
-2. **"Not authorized" message**: Add your user ID to `authorizedUserIds` or remove the restriction
+2. **"Not authorized" message**: Check that your user ID is in the `authorizedUserIds` list
 3. **Bot offline**: Check that the bot token is valid and the bot is invited to your server
 4. **Agent timeouts**: Verify the `maxRunTime` setting in your agent configuration if using custom agent types
 5. **Long messages not sent**: The service automatically chunks messages to respect Discord's character limit
+6. **Startup message not received**: Ensure the `channelId` is correct and the bot has permission to send messages in that channel
 
 ## License
 
