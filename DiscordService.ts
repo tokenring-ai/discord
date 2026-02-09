@@ -17,7 +17,7 @@ export const DiscordServiceConfigSchema = z.object({
 export type DiscordServiceConfig = z.infer<typeof DiscordServiceConfigSchema>;
 
 export default class DiscordService implements TokenRingService {
-  name = "DiscordService";
+  readonly name = "DiscordService";
   description = "Provides a Discord bot for interacting with TokenRing agents.";
   private running = false;
   private client: Client | null = null;
