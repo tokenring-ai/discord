@@ -118,7 +118,7 @@ export default class DiscordService implements TokenRingService {
       this.running = false;
 
       for (const [userId, agent] of this.userAgents.entries()) {
-        await agentManager.deleteAgent(agent);
+        await agentManager.deleteAgent(agent.id, "Discord service was shut down");
       }
       this.userAgents.clear();
 
