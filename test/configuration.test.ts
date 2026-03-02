@@ -9,7 +9,7 @@ describe('Discord Service Configuration', () => {
         botToken: 'valid-bot-token',
         channelId: '123456789',
         authorizedUserIds: ['111111111', '222222222'],
-        defaultAgentType: 'teamLeader'
+        defaultAgentType: 'leader'
       };
 
       const result = DiscordServiceConfigSchema.safeParse(validConfig);
@@ -28,13 +28,13 @@ describe('Discord Service Configuration', () => {
         botToken: 'test-token',
         channelId: '123456',
         authorizedUserIds: ['111111', '222222'],
-        defaultAgentType: 'teamLeader'
+        defaultAgentType: 'leader'
       };
 
       expect(config.botToken).toBe('test-token');
       expect(config.channelId).toBe('123456');
       expect(config.authorizedUserIds).toEqual(['111111', '222222']);
-      expect(config.defaultAgentType).toBe('teamLeader');
+      expect(config.defaultAgentType).toBe('leader');
     });
 
     it('should handle partial config', () => {
