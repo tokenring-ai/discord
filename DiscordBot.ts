@@ -301,6 +301,7 @@ export default class DiscordBot {
       try {
         const {data} = await axios.get(attachment.url, {responseType: "arraybuffer"});
         attachments.push({
+          type: "attachment",
           name: attachment.name || `discord_file_${attachment.id}`,
           mimeType: attachment.contentType || "application/octet-stream",
           body: Buffer.from(data as ArrayBuffer).toString("base64"),
@@ -355,7 +356,7 @@ export default class DiscordBot {
               this.handleChatOutput(channelId, `\n[${event.type.split(".")[1].toUpperCase()}]: ${event.message}\n`);
               break;
             }
-            case "input.handled": {
+            case "agent.response": {
               const request = this.activeRequests.get(event.requestId);
               if (request) {
                 const response = this.chatResponses.get(request.channelId);
