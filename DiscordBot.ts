@@ -247,6 +247,7 @@ export default class DiscordBot {
     this.chatResponses.set(channelId, {text: null, messageIds: [], sentTexts: []});
 
     const requestId = agent.handleInput({
+      from: `Discord message from ${message.author.username}`,
       message: `/chat send From: ${message.author.displayName}, Username: (@${message.author.username}) ${cleanText || "No text sent"}`,
       attachments,
     });
@@ -277,6 +278,7 @@ export default class DiscordBot {
     this.chatResponses.set(channelId, {text: null, messageIds: [], sentTexts: []});
 
     const requestId = agent.handleInput({
+      from: `Discord message from ${message.author.username}`,
       message: `/chat send From: ${message.author.displayName}, Username: (@${message.author.username}) ${text || "No text sent"}`,
       attachments,
     });
