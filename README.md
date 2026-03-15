@@ -4,7 +4,7 @@ A TokenRing plugin providing Discord bot integration for AI-powered agent intera
 
 ## Overview
 
-The `@tokenring-ai/discord` package provides a comprehensive Discord integration that allows TokenRing agents to interact with users through Discord. It supports:
+The `@tokenring-ai/discord` package provides comprehensive Discord integration that allows TokenRing agents to interact with users through Discord. It supports:
 
 - **Multi-bot architecture**: Run multiple Discord bots with independent configurations
 - **Channel-based routing**: Configure specific agents for different Discord channels
@@ -24,14 +24,14 @@ bun add @tokenring-ai/discord
 
 This package requires the following dependencies:
 
-- `@tokenring-ai/app` (0.2.0)
-- `@tokenring-ai/chat` (0.2.0)
-- `@tokenring-ai/agent` (0.2.0)
-- `@tokenring-ai/utility` (0.2.0)
-- `@tokenring-ai/escalation` (0.2.0)
-- `discord.js` (^14.25.1)
-- `axios` (^1.13.6)
-- `zod` (^4.3.6)
+- `@tokenring-ai/app` (0.2.0) - Base application framework
+- `@tokenring-ai/chat` (0.2.0) - Chat service for agent interactions
+- `@tokenring-ai/agent` (0.2.0) - Agent management and event handling
+- `@tokenring-ai/utility` (0.2.0) - Shared utilities and helpers
+- `@tokenring-ai/escalation` (0.2.0) - Escalation service and provider interface
+- `discord.js` (^14.25.1) - Discord API client library
+- `axios` (^1.13.6) - HTTP client for attachment downloads
+- `zod` (^4.3.6) - Schema validation
 
 ## Features
 
@@ -58,7 +58,7 @@ The main service that manages multiple Discord bot instances.
 
 **Properties**:
 - `name: string` - Service name ("DiscordService")
-- `description: string` - Service description
+- `description: string` - Service description ("Manages multiple Discord bots for interacting with TokenRing agents.")
 
 **Methods**:
 - `getAvailableBots(): string[]` - Returns array of registered bot names
@@ -69,6 +69,11 @@ The main service that manages multiple Discord bot instances.
 ```typescript
 constructor(app: TokenRingApp, options: ParsedDiscordServiceConfig)
 ```
+
+**Internal Implementation**:
+- Uses `KeyedRegistry` to manage multiple `DiscordBot` instances
+- Starts all configured bots on initialization
+- Handles graceful shutdown by stopping all bots and cleaning up resources
 
 ### DiscordBot
 
@@ -91,6 +96,14 @@ Handles individual bot operations including message processing, agent management
 - `flushBuffer(channelId: string): Promise<void>` - Sends buffered messages to Discord
 - `sendMessage(channelId: string, text: string): Promise<string>` - Sends a message to a channel
 - `updateMessageWithFallback(channelId: string, messageId: string, text: string): Promise<string>` - Updates a message with fallback to new message
+- `agentEventLoop(channelId: string, agent: Agent, signal: AbortSignal): Promise<void>` - Processes agent events for a channel
+
+**Key Features**:
+- **Message buffering**: Accumulates agent output and sends in chunks
+- **Rate limiting**: 250ms delay between messages to respect Discord limits
+- **Message editing**: Attempts to update existing messages before creating new ones
+- **Reply tracking**: Tracks user replies to enable escalation workflows
+- **Attachment processing**: Downloads and converts attachments to base64 for agent processing
 
 ### DiscordEscalationProvider
 
@@ -106,6 +119,11 @@ constructor(config: ParsedDiscordEscalationProviderConfig)
 **Methods**:
 - `createCommunicationChannelWithUser(channelName: string, agent: Agent): Promise<CommunicationChannel>` - Creates a communication channel for escalation
 
+**Implementation**:
+- Retrieves the configured bot from `DiscordService`
+- Creates a communication channel for the specified channel configuration
+- Enables escalation workflows through Discord
+
 ### splitIntoChunks
 
 Utility function for splitting long messages into Discord-compatible chunks.
@@ -118,9 +136,51 @@ Utility function for splitting long messages into Discord-compatible chunks.
 **Returns**: Array of message chunks (max 1990 characters each)
 
 **Behavior**:
-- Splits text at markdown headers (`#`) when possible
+- Splits text at markdown headers (`#`) when possible for better formatting
 - Falls back to character-based splitting at 1990 character limit
-- Returns working messages for null input
+- Returns working messages for null input (e.g., "Working...", "Processing...")
+
+### Types
+
+#### MessageCapableChannel
+
+Type definition for Discord text channels that support message operations.
+
+```typescript
+type MessageCapableChannel = TextBasedChannel & {
+  send: (content: string) => Promise<Message>;
+  messages: {
+    fetch: (id: string) => Promise<Message>;
+  };
+};
+```
+
+#### ChatResponse
+
+Type for tracking chat response state per channel.
+
+```typescript
+type ChatResponse = {
+  text: string | null;
+  messageIds: (string | undefined)[];
+  sentTexts: string[];
+  isComplete?: boolean;
+};
+```
+
+#### UserChannel
+
+Type for tracking user communication channels for escalation.
+
+```typescript
+type UserChannel = {
+  destinationId: string;
+  trackedMessageIds: Set<string>;
+  queue: string[];
+  resolve?: (value: IteratorResult<string>) => void;
+  closed: boolean;
+};
+```
 
 ## Usage Examples
 
@@ -457,6 +517,14 @@ The package handles Discord events:
 - Direct messages are handled separately
 - Reply tracking enables escalation workflows
 
+### Gateway Intents
+
+The Discord client uses the following Gateway Intents:
+- `GatewayIntentBits.Guilds`: Server/guild operations
+- `GatewayIntentBits.GuildMessages`: Guild message events
+- `GatewayIntentBits.MessageContent`: Message content access
+- `GatewayIntentBits.DirectMessages`: Direct message events
+
 ### State Management
 
 - Each channel maintains a `ChatResponse` buffer
@@ -549,6 +617,10 @@ describe('Discord Package', () => {
 });
 ```
 
+### Test File
+
+The package includes a test file at `test/configuration.test.ts` for testing configuration validation and schema parsing.
+
 ## Best Practices
 
 ### Bot Token Security
@@ -624,4 +696,6 @@ MIT License - see LICENSE file for details.
 - `@tokenring-ai/escalation`: Escalation service and provider interface
 - `@tokenring-ai/agent`: Agent management and event handling
 - `@tokenring-ai/app`: Base application framework
+- `@tokenring-ai/chat`: Chat service for agent interactions
+- `@tokenring-ai/utility`: Shared utilities and helpers
 - `discord.js`: Discord API client library
