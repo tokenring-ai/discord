@@ -25,7 +25,6 @@ bun add @tokenring-ai/discord
 This package requires the following dependencies:
 
 - `@tokenring-ai/app` (0.2.0) - Base application framework
-- `@tokenring-ai/chat` (0.2.0) - Chat service for agent interactions
 - `@tokenring-ai/agent` (0.2.0) - Agent management and event handling
 - `@tokenring-ai/utility` (0.2.0) - Shared utilities and helpers
 - `@tokenring-ai/escalation` (0.2.0) - Escalation service and provider interface
@@ -81,6 +80,22 @@ Handles individual bot operations including message processing, agent management
 
 **Class**: `DiscordBot`
 
+**Constructor**:
+```typescript
+constructor(
+  app: TokenRingApp,
+  discordService: DiscordService,
+  botName: string,
+  botConfig: ParsedDiscordBotConfig
+)
+```
+
+**Properties**:
+- `botName: string` - The name of this bot instance
+- `botConfig: ParsedDiscordBotConfig` - Configuration for this bot
+- `client: Client` - Discord.js client instance (initialized in start())
+- `botUserId: string | undefined` - Discord user ID of the bot
+
 **Methods**:
 - `start(): Promise<void>` - Initializes and starts the Discord bot
 - `stop(): Promise<void>` - Stops the bot and cleans up resources
@@ -89,21 +104,27 @@ Handles individual bot operations including message processing, agent management
 - `createCommunicationChannelWithUser(userId: string): CommunicationChannel` - Creates a DM communication channel
 
 **Internal Methods**:
-- `handleMessage(message: Message): Promise<void>` - Processes incoming Discord messages
-- `handleDirectMessage(message: Message, userId: string, channelId: string, text: string): Promise<void>` - Handles DM messages
-- `extractAllAttachments(message: Message): Promise<InputAttachment[]>` - Downloads and processes file attachments
-- `ensureAgentForChannel(channelId: string, agentType: string): Promise<Agent>` - Ensures an agent exists for a channel
-- `flushBuffer(channelId: string): Promise<void>` - Sends buffered messages to Discord
-- `sendMessage(channelId: string, text: string): Promise<string>` - Sends a message to a channel
-- `updateMessageWithFallback(channelId: string, messageId: string, text: string): Promise<string>` - Updates a message with fallback to new message
-- `agentEventLoop(channelId: string, agent: Agent, signal: AbortSignal): Promise<void>` - Processes agent events for a channel
+- `handleMessage(message: Message): Promise<void>` - Processes incoming Discord messages, routing to DM or channel handlers
+- `handleDirectMessage(message: Message, userId: string, channelId: string, text: string): Promise<void>` - Handles DM messages with authorization checks
+- `extractAllAttachments(message: Message): Promise<InputAttachment[]>` - Downloads and processes file attachments, converting to base64
+- `ensureAgentForChannel(channelId: string, agentType: string): Promise<Agent>` - Ensures an agent exists for a channel, spawns if needed
+- `flushBuffer(channelId: string): Promise<void>` - Sends buffered messages to Discord, handles message editing and fallback
+- `sendMessage(channelId: string, text: string): Promise<string>` - Sends a message to a channel, returns message ID
+- `updateMessageWithFallback(channelId: string, messageId: string, text: string): Promise<string>` - Updates existing message or creates new if not found
+- `agentEventLoop(channelId: string, agent: Agent, signal: AbortSignal): Promise<void>` - Processes agent events for a channel, handles chat output
+- `scheduleSend(): void` - Schedules message sending with rate limiting
+- `processPending(): Promise<void>` - Processes all pending channel buffers
+- `fetchTextChannel(channelId: string): Promise<MessageCapableChannel>` - Fetches and validates text channel
 
 **Key Features**:
-- **Message buffering**: Accumulates agent output and sends in chunks
-- **Rate limiting**: 250ms delay between messages to respect Discord limits
+- **Message buffering**: Accumulates agent output and sends in chunks with 250ms rate limiting
+- **Rate limiting**: Automatic 250ms delay between messages to respect Discord API limits
 - **Message editing**: Attempts to update existing messages before creating new ones
-- **Reply tracking**: Tracks user replies to enable escalation workflows
+- **Reply tracking**: Tracks user replies to bot messages for escalation workflows
 - **Attachment processing**: Downloads and converts attachments to base64 for agent processing
+- **Agent per channel**: Each Discord channel maintains its own persistent agent instance
+- **Background event processing**: Agent events processed via background task with async iteration
+- **Graceful shutdown**: Clean buffer flushing and agent cleanup on bot stop
 
 ### DiscordEscalationProvider
 
@@ -123,6 +144,23 @@ constructor(config: ParsedDiscordEscalationProviderConfig)
 - Retrieves the configured bot from `DiscordService`
 - Creates a communication channel for the specified channel configuration
 - Enables escalation workflows through Discord
+
+### splitIntoChunks
+
+Utility function for splitting long messages into Discord-compatible chunks.
+
+**Function**: `splitIntoChunks(text: string | null): string[]`
+
+**Parameters**:
+- `text: string | null` - The text to split
+
+**Returns**: Array of message chunks (max 1990 characters each)
+
+**Behavior**:
+- Splits text at markdown headers (`\n#`) when possible for better formatting
+- Falls back to character-based splitting at 1990 character limit
+- Returns working messages for null input (e.g., "Working...", "Processing...")
+- Uses `getRandomItem` from `@tokenring-ai/utility` to select from predefined working messages
 
 ### splitIntoChunks
 
@@ -180,6 +218,27 @@ type UserChannel = {
   resolve?: (value: IteratorResult<string>) => void;
   closed: boolean;
 };
+```
+
+#### Internal State Types
+
+The DiscordBot class maintains several internal state structures:
+
+```typescript
+// Tracks active agent requests per channel
+type ActiveRequest = {
+  channelId: string;
+  responseSent: boolean;
+};
+
+// Tracks channels with pending message buffers
+// (Set<string> of channelIds)
+
+// Tracks message IDs to bot user ID mapping
+// (Map<string, string> of messageId -> botUserId)
+
+// Tracks event listeners per channel
+// (Set<string> of channelIds)
 ```
 
 ## Usage Examples
@@ -498,8 +557,36 @@ await app.installPlugin(discordPlugin, {
 ### Service Registration
 
 The plugin automatically registers:
-- **DiscordService**: Manages bot instances
-- **DiscordEscalationProvider**: Registered with EscalationService for providers with `type: "discord"`
+- **DiscordService**: Manages multiple Discord bot instances via `KeyedRegistry`
+- **DiscordEscalationProvider**: Registered with `EscalationService` for providers with `type: "discord"`
+
+### Exports
+
+The package exports the following components:
+
+```typescript
+// Services
+export { default as DiscordService } from "./DiscordService.ts";
+export { default as DiscordBotService } from "./DiscordService.ts"; // Alias
+
+// Escalation Provider
+export { default as DiscordEscalationProvider } from "./DiscordEscalationProvider.ts";
+
+// Schemas and Types
+export {
+  DiscordBotConfigSchema,
+  DiscordServiceConfigSchema,
+  DiscordEscalationProviderConfigSchema,
+} from "./schema.ts";
+
+export type {
+  ParsedDiscordBotConfig,
+  ParsedDiscordServiceConfig,
+  ParsedDiscordEscalationProviderConfig,
+} from "./schema.ts";
+```
+
+**Note**: `DiscordBotService` is an alias for `DiscordService` - both refer to the same class.
 
 ### Agent Integration
 
@@ -520,10 +607,13 @@ The package handles Discord events:
 ### Gateway Intents
 
 The Discord client uses the following Gateway Intents:
-- `GatewayIntentBits.Guilds`: Server/guild operations
-- `GatewayIntentBits.GuildMessages`: Guild message events
-- `GatewayIntentBits.MessageContent`: Message content access
-- `GatewayIntentBits.DirectMessages`: Direct message events
+
+```typescript
+GatewayIntentBits.Guilds,         // Server/guild operations
+GatewayIntentBits.GuildMessages,  // Guild message events
+GatewayIntentBits.MessageContent, // Message content access
+GatewayIntentBits.DirectMessages  // Direct message events
+```
 
 ### State Management
 
@@ -538,45 +628,67 @@ This package does not expose RPC endpoints. Communication is handled through Dis
 
 ## State Management
 
-### ChatResponse State
+### Per-Channel State
 
-Each active channel maintains a `ChatResponse` object:
+The DiscordBot maintains several state structures per channel:
 
 ```typescript
+// ChatResponse - Tracks accumulated agent output per channel
 type ChatResponse = {
-  text: string | null;
-  messageIds: (string | undefined)[];
-  sentTexts: string[];
-  isComplete?: boolean;
+  text: string | null;         // Accumulated response text
+  messageIds: (string | undefined)[];  // Discord message IDs for each chunk
+  sentTexts: string[];         // Previously sent text chunks for sync
+  isComplete?: boolean;        // Whether the response is finished
+};
+
+// UserChannel - Tracks user communication for escalation
+type UserChannel = {
+  destinationId: string;       // Discord user/channel ID
+  trackedMessageIds: Set<string>;  // Message IDs to track for replies
+  queue: string[];             // Buffered incoming messages
+  resolve?: (value: IteratorResult<string>) => void;  // Pending promise resolver
+  closed: boolean;             // Channel closed state
 };
 ```
 
-**Properties**:
-- `text`: Accumulated response text
-- `messageIds`: Discord message IDs for each chunk
-- `sentTexts`: Previously sent text chunks
-- `isComplete`: Whether the response is finished
-
-### UserChannel State
-
-Communication channels track state for escalation:
+### Internal State Structures
 
 ```typescript
-type UserChannel = {
-  destinationId: string;
-  trackedMessageIds: Set<string>;
-  queue: string[];
-  resolve?: (value: IteratorResult<string>) => void;
-  closed: boolean;
-};
+// Active requests tracking
+private activeRequests = new Map<string, { channelId: string; responseSent: boolean }>();
+
+// Pending channel buffers
+private pendingChannelIds = new Set<string>();
+
+// Message ID to bot user ID mapping
+private messageIdToBotUserId = new Map<string, string>();
+
+// Event listeners tracking
+private channelListeners = new Set<string>();
+
+// Rate limiting state
+private lastSendTime = 0;
+private sendTimer: NodeJS.Timeout | null = null;
+private isProcessing = false;
 ```
 
-### Persistence Patterns
+### State Lifecycle
 
-- Agent instances persist per channel
-- Message IDs are tracked for updates
-- Reply messages are associated with channels
-- State is restored between agent event processing
+1. **Initialization**: State structures created when bot starts
+2. **Per-channel setup**: Agent spawned, event loop started on first message
+3. **Active request tracking**: Request ID mapped to channel when input sent
+4. **Response accumulation**: Chat output accumulated in `ChatResponse` buffer
+5. **Buffer flushing**: Messages sent in chunks with rate limiting
+6. **Completion**: When agent response completes, buffer flushed and state cleaned up
+7. **Shutdown**: All state cleared, agents deleted, bots stopped
+
+### Cleanup Patterns
+
+- `ChatResponse` deleted when response complete and no errors
+Pending channels re-scheduled if errors occur
+- User channels cleaned up on async dispose
+- All state cleared on bot stop
+- Agents deleted via `AgentManager` on shutdown
 
 ## Testing
 
@@ -625,64 +737,105 @@ The package includes a test file at `test/configuration.test.ts` for testing con
 
 ### Bot Token Security
 
-- Store tokens in environment variables
+- Store tokens in environment variables (e.g., `DISCORD_BOT_TOKEN`)
 - Never commit tokens to version control
-- Use different tokens for development and production
+- Use different tokens for development and production environments
+- Rotate tokens periodically and revoke compromised tokens immediately
 
 ### Channel Authorization
 
-- Use `allowedUsers` to restrict channel access
-- Empty `allowedUsers` array allows all users
-- Combine with Discord role-based permissions
+- Use `allowedUsers` array to restrict channel access to specific user IDs
+- Empty `allowedUsers` array allows all users in the guild
+- Combine with Discord role-based permissions for layered security
+- Regularly audit and update authorized user lists
 
 ### Message Rate Limiting
 
-- The package implements 250ms rate limiting automatically
-- Large responses are automatically chunked
-- Message edits are preferred over new messages
+- The package implements automatic 250ms rate limiting between messages
+- Large responses are automatically chunked to 1990 characters
+- Message edits are preferred over new messages to reduce clutter
+- Monitor for rate limit errors and adjust if needed
 
 ### Attachment Handling
 
-- Set appropriate `maxFileSize` limits
-- Monitor attachment processing errors
-- Consider bandwidth implications for large files
+- Set appropriate `maxFileSize` limits based on your use case (default: 20MB)
+- Monitor attachment processing errors in service output
+- Consider bandwidth implications for large file volumes
+- Attachments exceeding size limit are skipped with error logging
 
 ### Agent Configuration
 
-- Use distinct `agentType` values per channel
-- Configure appropriate agent capabilities per use case
+- Use distinct `agentType` values per channel for proper agent routing
+- Configure appropriate agent capabilities per use case (e.g., support vs engineering)
 - Monitor agent resource usage for high-traffic channels
+- Each channel maintains its own persistent agent instance
 
 ### Escalation Setup
 
-- Configure dedicated channels for escalation
+- Configure dedicated channels for escalation workflows
 - Use specific bot instances for admin communications
-- Test escalation workflows before production use
+- Test escalation workflows thoroughly before production use
+- Ensure authorized users are properly configured for escalation channels
+
+### Error Handling
+
+- Monitor service output for bot initialization errors
+- Handle attachment download failures gracefully
+- Implement proper error logging for message send/update failures
+- Use try-catch blocks when calling bot methods directly
+
+### Performance Considerations
+
+- Limit the number of concurrent channels per bot
+- Monitor memory usage for high-traffic deployments
+- Use separate bots for different environments (dev/prod)
+- Consider rate limiting impact on high-volume channels
 
 ## Development
 
 ### Build
 
 ```bash
+cd pkg/discord
 bun run build
 ```
 
 ### Test
 
 ```bash
+cd pkg/discord
 bun run test
 ```
 
 ### Test Watch Mode
 
 ```bash
+cd pkg/discord
 bun run test:watch
 ```
 
 ### Test Coverage
 
 ```bash
+cd pkg/discord
 bun run test:coverage
+```
+
+### Package Structure
+
+```
+pkg/discord/
+├── DiscordBot.ts           # Individual bot implementation
+├── DiscordEscalationProvider.ts  # Escalation provider implementation
+├── DiscordService.ts       # Service managing multiple bots
+├── index.ts               # Public exports
+├── plugin.ts              # TokenRing plugin definition
+├── schema.ts              # Zod schemas and types
+├── splitIntoChunks.ts     # Message chunking utility
+├── package.json           # Package metadata and dependencies
+├── vitest.config.ts       # Test configuration
+└── test/
+    └── configuration.test.ts  # Configuration validation tests
 ```
 
 ## License

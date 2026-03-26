@@ -4,7 +4,7 @@ import {EscalationServiceConfigSchema} from "@tokenring-ai/escalation/schema";
 import {z} from "zod";
 import DiscordService from "./DiscordService.ts";
 import {DiscordEscalationProvider} from "./index.ts";
-import packageJSON from './package.json' with {type: 'json'};
+import packageJSON from "./package.json" with {type: "json"};
 import {DiscordEscalationProviderConfigSchema, DiscordServiceConfigSchema} from "./schema.ts";
 
 const packageConfigSchema = z.object({

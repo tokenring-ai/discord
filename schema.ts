@@ -22,7 +22,7 @@ export const DiscordServiceConfigSchema = z.object({
 export type ParsedDiscordServiceConfig = z.output<typeof DiscordServiceConfigSchema>;
 
 export const DiscordEscalationProviderConfigSchema = z.object({
-  type: z.literal('discord'),
+  type: z.literal("discord"),
   bot: z.string(),
   channel: z.string(),
 });
