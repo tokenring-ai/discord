@@ -1,5 +1,9 @@
 import z from "zod";
 
+export const DiscordEscalationBotConfigSchema = z.object({
+  channel: z.string(),
+});
+
 export const DiscordBotConfigSchema = z.object({
   name: z.string(),
   botToken: z.string().min(1, "Bot token is required"),
@@ -12,12 +16,13 @@ export const DiscordBotConfigSchema = z.object({
   })),
   dmAgentType: z.string().optional(),
   dmAllowedUsers: z.array(z.string()).default([]),
+  escalation: DiscordEscalationBotConfigSchema.optional(),
 });
 
 export type ParsedDiscordBotConfig = z.output<typeof DiscordBotConfigSchema>;
 
 export const DiscordServiceConfigSchema = z.object({
-  bots: z.record(z.string(), DiscordBotConfigSchema)
+  bots: z.record(z.string(), DiscordBotConfigSchema).default({}),
 });
 export type ParsedDiscordServiceConfig = z.output<typeof DiscordServiceConfigSchema>;
 
@@ -28,3 +33,4 @@ export const DiscordEscalationProviderConfigSchema = z.object({
 });
 
 export type ParsedDiscordEscalationProviderConfig = z.output<typeof DiscordEscalationProviderConfigSchema>;
+export type ParsedDiscordEscalationBotConfig = z.output<typeof DiscordEscalationBotConfigSchema>;
