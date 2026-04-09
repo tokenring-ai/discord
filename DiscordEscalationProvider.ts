@@ -1,7 +1,7 @@
 import {Agent} from "@tokenring-ai/agent";
 import type {CommunicationChannel, EscalationProvider} from "@tokenring-ai/escalation/EscalationProvider";
-import type {ParsedDiscordEscalationProviderConfig} from "./schema.ts";
 import DiscordService from "./DiscordService.ts";
+import type {ParsedDiscordEscalationProviderConfig} from "./schema.ts";
 
 export default class DiscordEscalationProvider implements EscalationProvider {
   constructor(readonly config: ParsedDiscordEscalationProviderConfig) {}

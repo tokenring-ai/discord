@@ -4,16 +4,10 @@ import {AgentEventState} from "@tokenring-ai/agent/state/agentEventState";
 import TokenRingApp from "@tokenring-ai/app";
 import type {CommunicationChannel} from "@tokenring-ai/escalation/EscalationProvider";
 import axios from "axios";
-import {
-  ChannelType,
-  Client,
-  GatewayIntentBits,
-  Message,
-  type TextBasedChannel,
-} from "discord.js";
+import {ChannelType, Client, GatewayIntentBits, Message, type TextBasedChannel,} from "discord.js";
+import DiscordService from "./DiscordService.ts";
 import type {ParsedDiscordBotConfig} from "./schema.ts";
 import {splitIntoChunks} from "./splitIntoChunks.ts";
-import DiscordService from "./DiscordService.ts";
 
 type UserChannel = {
   destinationId: string;
@@ -40,7 +34,7 @@ type MessageCapableChannel = TextBasedChannel & {
 export default class DiscordBot {
   private client!: Client;
   private botUserId?: string;
-  private channelAgents = new Map<string, Promise<Agent>>();
+  private channelAgents = new Map<string, Agent>();
   private userChannels = new Map<string, UserChannel>();
   private chatResponses = new Map<string, ChatResponse>();
   private lastSendTime = 0;
@@ -319,8 +313,8 @@ export default class DiscordBot {
   private async ensureAgentForChannel(channelId: string, agentType: string): Promise<Agent> {
     if (!this.channelAgents.has(channelId)) {
       const agentManager = this.app.requireService(AgentManager);
-      const agentPromise = agentManager.spawnAgent({agentType, headless: true});
-      this.channelAgents.set(channelId, agentPromise);
+      const agent = agentManager.spawnAgent({agentType, headless: true});
+      this.channelAgents.set(channelId, agent);
     }
 
     const agent = await this.channelAgents.get(channelId)!;
