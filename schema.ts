@@ -9,11 +9,14 @@ export const DiscordBotConfigSchema = z.object({
   botToken: z.string().min(1, "Bot token is required"),
   joinMessage: z.string().optional(),
   maxFileSize: z.number().default(20_971_520), // 20MB default
-  channels: z.record(z.string(), z.object({
-    channelId: z.string(),
-    allowedUsers: z.array(z.string()).default([]),
-    agentType: z.string(),
-  })),
+  channels: z.record(
+    z.string(),
+    z.object({
+      channelId: z.string(),
+      allowedUsers: z.array(z.string()).default([]),
+      agentType: z.string(),
+    }),
+  ),
   dmAgentType: z.string().optional(),
   dmAllowedUsers: z.array(z.string()).default([]),
   escalation: DiscordEscalationBotConfigSchema.optional(),
@@ -24,7 +27,9 @@ export type ParsedDiscordBotConfig = z.output<typeof DiscordBotConfigSchema>;
 export const DiscordServiceConfigSchema = z.object({
   bots: z.record(z.string(), DiscordBotConfigSchema).default({}),
 });
-export type ParsedDiscordServiceConfig = z.output<typeof DiscordServiceConfigSchema>;
+export type ParsedDiscordServiceConfig = z.output<
+  typeof DiscordServiceConfigSchema
+>;
 
 export const DiscordEscalationProviderConfigSchema = z.object({
   type: z.literal("discord"),
@@ -32,5 +37,9 @@ export const DiscordEscalationProviderConfigSchema = z.object({
   channel: z.string(),
 });
 
-export type ParsedDiscordEscalationProviderConfig = z.output<typeof DiscordEscalationProviderConfigSchema>;
-export type ParsedDiscordEscalationBotConfig = z.output<typeof DiscordEscalationBotConfigSchema>;
+export type ParsedDiscordEscalationProviderConfig = z.output<
+  typeof DiscordEscalationProviderConfigSchema
+>;
+export type ParsedDiscordEscalationBotConfig = z.output<
+  typeof DiscordEscalationBotConfigSchema
+>;

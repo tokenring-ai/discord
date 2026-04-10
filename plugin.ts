@@ -1,10 +1,10 @@
-import {TokenRingPlugin} from "@tokenring-ai/app";
+import type {TokenRingPlugin} from "@tokenring-ai/app";
 import {EscalationService} from "@tokenring-ai/escalation";
 import {z} from "zod";
 import DiscordService from "./DiscordService.ts";
 import {DiscordEscalationProvider} from "./index.ts";
 import packageJSON from "./package.json" with {type: "json"};
-import {DiscordServiceConfigSchema, type ParsedDiscordBotConfig} from "./schema.ts";
+import {DiscordServiceConfigSchema, type ParsedDiscordBotConfig,} from "./schema.ts";
 
 const packageConfigSchema = z.object({
   discord: DiscordServiceConfigSchema.prefault({bots: {}}),
@@ -16,11 +16,14 @@ function addBotsFromEnv(bots: Record<string, Partial<ParsedDiscordBotConfig>>) {
     if (!match || !value) continue;
     const n = match[1];
     const name = process.env[`DISCORD_BOT_NAME${n}`] ?? `Discord Bot${n ? ` ${n}` : ""}`;
+
+    const escalationChannel = process.env[`DISCORD_ESCALATION_CHANNEL${n}`];
+
     bots[name] = {
       name,
       botToken: value,
-      escalation: process.env[`DISCORD_ESCALATION_CHANNEL${n}`]
-        ? {channel: process.env[`DISCORD_ESCALATION_CHANNEL${n}`]!}
+      escalation: escalationChannel
+        ? {channel: escalationChannel}
         : undefined,
       channels: {},
     };
@@ -36,12 +39,21 @@ export default {
     addBotsFromEnv(config.discord.bots);
     if (Object.keys(config.discord.bots).length === 0) return;
 
-    app.addServices(new DiscordService(app, DiscordServiceConfigSchema.parse(config.discord)));
+    app.addServices(
+      new DiscordService(app, DiscordServiceConfigSchema.parse(config.discord)),
+    );
 
-    app.waitForService(EscalationService, escalationService => {
+    app.waitForService(EscalationService, (escalationService) => {
       for (const [botName, bot] of Object.entries(config.discord.bots)) {
         if (bot.escalation) {
-          escalationService.registerProvider(botName, new DiscordEscalationProvider({type: "discord", bot: botName, channel: bot.escalation.channel}));
+          escalationService.registerProvider(
+            botName,
+            new DiscordEscalationProvider({
+              type: "discord",
+              bot: botName,
+              channel: bot.escalation.channel,
+            }),
+          );
         }
       }
     });

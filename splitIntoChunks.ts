@@ -10,7 +10,7 @@ export function splitIntoChunks(text: string | null): string[] {
 
   const sections = text.split(/(?=\n#)/);
   const chunks: string[] = [];
-  let current = '';
+  let current = "";
 
   for (const section of sections) {
     if (current.length + section.length > MAX) {
