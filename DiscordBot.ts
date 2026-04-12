@@ -1,11 +1,10 @@
 import {type Agent, AgentManager} from "@tokenring-ai/agent";
-import type {InputAttachment} from "@tokenring-ai/agent/AgentEvents";
+import {BaseAttachmentSchema, type InputAttachment} from "@tokenring-ai/agent/AgentEvents";
 import {AgentEventState} from "@tokenring-ai/agent/state/agentEventState";
 import type TokenRingApp from "@tokenring-ai/app";
 import type {CommunicationChannel} from "@tokenring-ai/escalation/EscalationProvider";
-import axios from "axios";
 import type {MaybePromise} from "bun";
-import {ChannelType, Client, GatewayIntentBits, type Message, type TextBasedChannel,} from "discord.js";
+import {ChannelType, Client, GatewayIntentBits, type Message, type TextBasedChannel} from "discord.js";
 import type DiscordService from "./DiscordService.ts";
 import type {ParsedDiscordBotConfig} from "./schema.ts";
 import {splitIntoChunks} from "./splitIntoChunks.ts";
@@ -352,13 +351,18 @@ export default class DiscordBot {
       if (!attachment.url) continue;
 
       try {
-        const {data} = await axios.get(attachment.url, {
-          responseType: "arraybuffer",
-        });
+        const response = await fetch(attachment.url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch attachment: ${response.statusText}`);
+        }
+        const data = await response.arrayBuffer();
+
+        const mimeType = BaseAttachmentSchema.shape.mimeType.parse(attachment.contentType);
+
         attachments.push({
           type: "attachment",
           name: attachment.name || `discord_file_${attachment.id}`,
-          mimeType: attachment.contentType || "application/octet-stream",
+          mimeType,
           body: Buffer.from(data as ArrayBuffer).toString("base64"),
           encoding: "base64",
           timestamp: Date.now(),

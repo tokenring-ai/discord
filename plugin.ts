@@ -4,7 +4,7 @@ import {z} from "zod";
 import DiscordService from "./DiscordService.ts";
 import {DiscordEscalationProvider} from "./index.ts";
 import packageJSON from "./package.json" with {type: "json"};
-import {DiscordServiceConfigSchema, type ParsedDiscordBotConfig,} from "./schema.ts";
+import {DiscordServiceConfigSchema, type ParsedDiscordBotConfig} from "./schema.ts";
 
 const packageConfigSchema = z.object({
   discord: DiscordServiceConfigSchema.prefault({bots: {}}),

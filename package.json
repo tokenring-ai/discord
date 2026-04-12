@@ -8,8 +8,7 @@
     "@tokenring-ai/agent": "0.2.0",
     "@tokenring-ai/utility": "0.2.0",
     "@tokenring-ai/escalation": "0.2.0",
-    "axios": "^1.13.6",
-    "discord.js": "^14.25.1",
+    "discord.js": "^14.26.2",
     "zod": "^4.3.6"
   },
   "exports": {

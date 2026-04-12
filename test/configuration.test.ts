@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {DiscordBotConfigSchema, DiscordEscalationProviderConfigSchema, DiscordServiceConfigSchema, type ParsedDiscordServiceConfig,} from '../schema';
+import {DiscordBotConfigSchema, DiscordEscalationProviderConfigSchema, DiscordServiceConfigSchema, type ParsedDiscordServiceConfig} from '../schema';
 
 describe('Discord Service Configuration', () => {
   it('validates a complete multi-bot config', () => {

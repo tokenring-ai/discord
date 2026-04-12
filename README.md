@@ -56,20 +56,24 @@ The main service that manages multiple Discord bot instances.
 **Class**: `DiscordService implements TokenRingService`
 
 **Properties**:
+
 - `name: string` - Service name ("DiscordService")
 - `description: string` - Service description ("Manages multiple Discord bots for interacting with TokenRing agents.")
 
 **Methods**:
+
 - `getAvailableBots(): string[]` - Returns array of registered bot names
 - `getBot(botName: string): DiscordBot | undefined` - Returns a specific bot instance
 - `run(signal: AbortSignal): Promise<void>` - Starts all configured bots and handles shutdown
 
 **Constructor**:
+
 ```typescript
 constructor(app: TokenRingApp, options: ParsedDiscordServiceConfig)
 ```
 
 **Internal Implementation**:
+
 - Uses `KeyedRegistry` to manage multiple `DiscordBot` instances
 - Starts all configured bots on initialization
 - Handles graceful shutdown by stopping all bots and cleaning up resources
@@ -81,6 +85,7 @@ Handles individual bot operations including message processing, agent management
 **Class**: `DiscordBot`
 
 **Constructor**:
+
 ```typescript
 constructor(
   app: TokenRingApp,
@@ -91,12 +96,14 @@ constructor(
 ```
 
 **Properties**:
+
 - `botName: string` - The name of this bot instance
 - `botConfig: ParsedDiscordBotConfig` - Configuration for this bot
 - `client: Client` - Discord.js client instance (initialized in start())
 - `botUserId: string | undefined` - Discord user ID of the bot
 
 **Methods**:
+
 - `start(): Promise<void>` - Initializes and starts the Discord bot
 - `stop(): Promise<void>` - Stops the bot and cleans up resources
 - `getBotUserId(): string | undefined` - Returns the Discord user ID of the bot
@@ -104,6 +111,7 @@ constructor(
 - `createCommunicationChannelWithUser(userId: string): CommunicationChannel` - Creates a DM communication channel
 
 **Internal Methods**:
+
 - `handleMessage(message: Message): Promise<void>` - Processes incoming Discord messages, routing to DM or channel handlers
 - `handleDirectMessage(message: Message, userId: string, channelId: string, text: string): Promise<void>` - Handles DM messages with authorization checks
 - `extractAllAttachments(message: Message): Promise<InputAttachment[]>` - Downloads and processes file attachments, converting to base64
@@ -117,6 +125,7 @@ constructor(
 - `fetchTextChannel(channelId: string): Promise<MessageCapableChannel>` - Fetches and validates text channel
 
 **Key Features**:
+
 - **Message buffering**: Accumulates agent output and sends in chunks with 250ms rate limiting
 - **Rate limiting**: Automatic 250ms delay between messages to respect Discord API limits
 - **Message editing**: Attempts to update existing messages before creating new ones
@@ -133,14 +142,17 @@ Integration with the escalation system for admin communications via Discord.
 **Class**: `DiscordEscalationProvider implements EscalationProvider`
 
 **Constructor**:
+
 ```typescript
 constructor(config: ParsedDiscordEscalationProviderConfig)
 ```
 
 **Methods**:
+
 - `createCommunicationChannelWithUser(channelName: string, agent: Agent): Promise<CommunicationChannel>` - Creates a communication channel for escalation
 
 **Implementation**:
+
 - Retrieves the configured bot from `DiscordService`
 - Creates a communication channel for the specified channel configuration
 - Enables escalation workflows through Discord
@@ -152,11 +164,13 @@ Utility function for splitting long messages into Discord-compatible chunks.
 **Function**: `splitIntoChunks(text: string | null): string[]`
 
 **Parameters**:
+
 - `text: string | null` - The text to split
 
 **Returns**: Array of message chunks (max 1990 characters each)
 
 **Behavior**:
+
 - Splits text at markdown headers (`\n#`) when possible for better formatting
 - Falls back to character-based splitting at 1990 character limit
 - Returns working messages for null input (e.g., "Working...", "Processing...")
@@ -169,11 +183,13 @@ Utility function for splitting long messages into Discord-compatible chunks.
 **Function**: `splitIntoChunks(text: string | null): string[]`
 
 **Parameters**:
+
 - `text: string | null` - The text to split
 
 **Returns**: Array of message chunks (max 1990 characters each)
 
 **Behavior**:
+
 - Splits text at markdown headers (`#`) when possible for better formatting
 - Falls back to character-based splitting at 1990 character limit
 - Returns working messages for null input (e.g., "Working...", "Processing...")
@@ -557,6 +573,7 @@ await app.installPlugin(discordPlugin, {
 ### Service Registration
 
 The plugin automatically registers:
+
 - **DiscordService**: Manages multiple Discord bot instances via `KeyedRegistry`
 - **DiscordEscalationProvider**: Registered with `EscalationService` for providers with `type: "discord"`
 
@@ -591,6 +608,7 @@ export type {
 ### Agent Integration
 
 Each Discord channel maintains its own agent instance:
+
 - Agents are spawned on first message to a channel
 - Agent context persists for the channel's lifetime
 - Background event loops process agent outputs
@@ -599,6 +617,7 @@ Each Discord channel maintains its own agent instance:
 ### Event Handling
 
 The package handles Discord events:
+
 - `messageCreate`: Processes incoming messages
 - Bot mentions trigger agent interactions in guild channels
 - Direct messages are handled separately
