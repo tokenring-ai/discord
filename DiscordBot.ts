@@ -69,7 +69,7 @@ export default class DiscordBot {
     this.client.on("messageCreate", async (message) => {
       try {
         await this.handleMessage(message);
-      } catch (error) {
+      } catch (error: unknown) {
         this.app.serviceError(
           this.discordService,
           "Error processing message:",
@@ -100,7 +100,7 @@ export default class DiscordBot {
             channelConfig.channelId,
             this.botConfig.joinMessage,
           );
-        } catch (error) {
+        } catch (error: unknown) {
           this.app.serviceError(
             this.discordService,
             `Failed to announce to channel ${channelConfig.channelId}:`,
@@ -128,13 +128,12 @@ export default class DiscordBot {
     this.activeRequests.clear();
 
     const agentManager = this.app.requireService(AgentManager);
-    for (const agentPromise of this.channelAgents.values()) {
-      const agent = await agentPromise;
-      await agentManager.deleteAgent(agent.id, "Discord bot was shut down.");
+    for (const agent of this.channelAgents.values()) {
+      agentManager.deleteAgent(agent.id, "Discord bot was shut down.");
     }
     this.channelAgents.clear();
 
-    this.client.destroy();
+    await this.client.destroy();
   }
 
   createCommunicationChannelWithChannel(
@@ -367,7 +366,7 @@ export default class DiscordBot {
           encoding: "base64",
           timestamp: Date.now(),
         });
-      } catch (error) {
+      } catch (error: unknown) {
         this.app.serviceError(
           this.discordService,
           `Failed to fetch Discord attachment ${attachment.id}:`,
@@ -458,7 +457,7 @@ export default class DiscordBot {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof Error && error.name !== "AbortError") {
         this.app.serviceError(
           this.discordService,
@@ -539,7 +538,7 @@ export default class DiscordBot {
           response.messageIds[i] = postedMessageId;
         }
         response.sentTexts[i] = chunk;
-      } catch (error) {
+      } catch (error: unknown) {
         hadErrors = true;
         this.app.serviceError(
           this.discordService,
@@ -578,7 +577,7 @@ export default class DiscordBot {
       const existingMessage = await channel.messages.fetch(messageId);
       const updated = await existingMessage.edit(text);
       return updated.id;
-    } catch (error) {
+    } catch (error: unknown) {
       if (!this.isMessageNotFoundError(error)) throw error;
       return this.sendMessage(channelId, text);
     }
