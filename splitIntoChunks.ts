@@ -23,7 +23,7 @@ export function splitIntoChunks(text: string | null): string[] {
 
   if (current) chunks.push(current);
 
-  return chunks.flatMap((chunk) => {
+  return chunks.flatMap(chunk => {
     const parts: string[] = [];
     let remaining = chunk;
 

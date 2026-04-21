@@ -1,4 +1,4 @@
-export {default as DiscordEscalationProvider} from "./DiscordEscalationProvider.ts";
+export { default as DiscordEscalationProvider } from "./DiscordEscalationProvider.ts";
 export {
   default as DiscordBotService,
   default as DiscordService,

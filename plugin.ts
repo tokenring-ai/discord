@@ -1,13 +1,14 @@
-import type {TokenRingPlugin} from "@tokenring-ai/app";
-import {EscalationService} from "@tokenring-ai/escalation";
-import {z} from "zod";
+import type { TokenRingPlugin } from "@tokenring-ai/app";
+import { EscalationService } from "@tokenring-ai/escalation";
+import { stripUndefinedKeys } from "@tokenring-ai/utility/object/stripObject";
+import { z } from "zod";
 import DiscordService from "./DiscordService.ts";
-import {DiscordEscalationProvider} from "./index.ts";
-import packageJSON from "./package.json" with {type: "json"};
-import {DiscordServiceConfigSchema, type ParsedDiscordBotConfig} from "./schema.ts";
+import { DiscordEscalationProvider } from "./index.ts";
+import packageJSON from "./package.json" with { type: "json" };
+import { DiscordServiceConfigSchema, type ParsedDiscordBotConfig } from "./schema.ts";
 
 const packageConfigSchema = z.object({
-  discord: DiscordServiceConfigSchema.prefault({bots: {}}),
+  discord: DiscordServiceConfigSchema.prefault({ bots: {} }),
 });
 
 function addBotsFromEnv(bots: Record<string, Partial<ParsedDiscordBotConfig>>) {
@@ -19,14 +20,12 @@ function addBotsFromEnv(bots: Record<string, Partial<ParsedDiscordBotConfig>>) {
 
     const escalationChannel = process.env[`DISCORD_ESCALATION_CHANNEL${n}`];
 
-    bots[name] = {
+    bots[name] = stripUndefinedKeys({
       name,
       botToken: value,
-      escalation: escalationChannel
-        ? {channel: escalationChannel}
-        : undefined,
+      escalation: escalationChannel ? { channel: escalationChannel } : undefined,
       channels: {},
-    };
+    });
   }
 }
 
@@ -39,11 +38,9 @@ export default {
     addBotsFromEnv(config.discord.bots);
     if (Object.keys(config.discord.bots).length === 0) return;
 
-    app.addServices(
-      new DiscordService(app, DiscordServiceConfigSchema.parse(config.discord)),
-    );
+    app.addServices(new DiscordService(app, DiscordServiceConfigSchema.parse(config.discord)));
 
-    app.waitForService(EscalationService, (escalationService) => {
+    app.waitForService(EscalationService, escalationService => {
       for (const [botName, bot] of Object.entries(config.discord.bots)) {
         if (bot.escalation) {
           escalationService.registerProvider(
