@@ -1,24 +1,24 @@
-import {describe, expect, it} from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import {DiscordBotConfigSchema, DiscordEscalationProviderConfigSchema, DiscordServiceConfigSchema, type ParsedDiscordServiceConfig} from '../schema';
+import { DiscordBotConfigSchema, DiscordEscalationProviderConfigSchema, DiscordServiceConfigSchema, type ParsedDiscordServiceConfig } from "../schema";
 
-describe('Discord Service Configuration', () => {
-  it('validates a complete multi-bot config', () => {
+describe("Discord Service Configuration", () => {
+  it("validates a complete multi-bot config", () => {
     const validConfig = {
       bots: {
         primary: {
-          name: 'Primary Bot',
-          botToken: 'valid-bot-token',
-          joinMessage: 'Discord bot is online!',
+          name: "Primary Bot",
+          botToken: "valid-bot-token",
+          joinMessage: "Discord bot is online!",
           channels: {
             dev: {
-              channelId: '123456789',
-              allowedUsers: ['111111111', '222222222'],
-              agentType: 'leader'
+              channelId: "123456789",
+              allowedUsers: ["111111111", "222222222"],
+              agentType: "leader"
             }
           },
-          dmAgentType: 'personalAgent',
-          dmAllowedUsers: ['111111111']
+          dmAgentType: "personalAgent",
+          dmAllowedUsers: ["111111111"]
         }
       }
     };
@@ -39,14 +39,14 @@ describe('Discord Service Configuration', () => {
     }
   });
 
-  it('applies defaults for optional bot fields', () => {
+  it("applies defaults for optional bot fields", () => {
     const result = DiscordBotConfigSchema.parse({
-      name: 'Default Bot',
-      botToken: 'token',
+      name: "Default Bot",
+      botToken: "token",
       channels: {
         ops: {
-          channelId: '987654321',
-          agentType: 'teamLeader'
+          channelId: "987654321",
+          agentType: "teamLeader"
         }
       }
     });
@@ -57,18 +57,18 @@ describe('Discord Service Configuration', () => {
     expect(result.dmAgentType).toBeUndefined();
   });
 
-  it('infers parsed config type from schema output', () => {
+  it("infers parsed config type from schema output", () => {
     const config: ParsedDiscordServiceConfig = {
       bots: {
         default: {
-          name: 'Default Bot',
-          botToken: 'token',
+          name: "Default Bot",
+          botToken: "token",
           maxFileSize: 1024,
           channels: {
             support: {
-              channelId: '123',
+              channelId: "123",
               allowedUsers: [],
-              agentType: 'supportAgent'
+              agentType: "supportAgent"
             }
           },
           dmAllowedUsers: []
@@ -76,14 +76,14 @@ describe('Discord Service Configuration', () => {
       }
     };
 
-    expect(config.bots.default.channels.support.channelId).toBe('123');
+    expect(config.bots.default.channels.support.channelId).toBe("123");
   });
 
-  it('validates escalation provider config', () => {
+  it("validates escalation provider config", () => {
     const providerConfig = {
-      type: 'discord',
-      bot: 'primary',
-      channel: 'admins'
+      type: "discord",
+      bot: "primary",
+      channel: "admins"
     };
 
     const result = DiscordEscalationProviderConfigSchema.safeParse(providerConfig);

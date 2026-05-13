@@ -133,6 +133,10 @@ export default class DiscordBot {
     });
   }
 
+  getBotUserId(): string | undefined {
+    return this.botUserId;
+  }
+
   private createTrackedChannel(destinationId: string, sendFn: (messageText: string) => Promise<string>): CommunicationChannel {
     const trackedMessageIds = new Set<string>();
 
@@ -502,9 +506,5 @@ export default class DiscordBot {
     }
 
     return channel as MessageCapableChannel;
-  }
-
-  getBotUserId(): string | undefined {
-    return this.botUserId;
   }
 }

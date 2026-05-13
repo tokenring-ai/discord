@@ -423,9 +423,9 @@ export const DiscordEscalationBotConfigSchema = z.object({
 
 **Properties**:
 
-| Property  | Type     | Required | Description                        |
-|-----------|----------|----------|------------------------------------|
-| `channel` | string   | Yes      | Name of the channel for escalation |
+| Property  | Type   | Required | Description                        |
+|-----------|--------|----------|------------------------------------|
+| `channel` | string | Yes      | Name of the channel for escalation |
 
 #### DiscordBotConfigSchema
 
