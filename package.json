@@ -1,6 +1,6 @@
 {
   "name": "@tokenring-ai/discord",
-  "description": "A Token Ring plugin providing Discord integration.",
+  "description": "A TokenRing plugin providing Discord bot integration for AI-powered agent interactions through Discord.",
   "version": "0.2.0",
   "dependencies": {
     "@tokenring-ai/app": "workspace:*",

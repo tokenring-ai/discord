@@ -1,13 +1,10 @@
 # @tokenring-ai/discord
 
-A TokenRing plugin providing Discord bot integration for AI-powered agent interactions through Discord. This package
-enables multiple Discord bots to communicate with TokenRing agents, supporting both guild channels and direct messages
-with per-user/channel authorization and persistent agent context.
+A TokenRing plugin providing Discord bot integration for AI-powered agent interactions through Discord. This package enables multiple Discord bots to communicate with TokenRing agents, supporting both guild channels and direct messages with per-user/channel authorization and persistent agent context.
 
 ## Overview
 
-The `@tokenring-ai/discord` package provides comprehensive Discord integration that allows TokenRing agents to interact
-with users through Discord. It supports:
+The `@tokenring-ai/discord` package provides comprehensive Discord integration that allows TokenRing agents to interact with users through Discord. It supports:
 
 - **Multi-bot architecture**: Run multiple Discord bots with independent configurations
 - **Channel-based routing**: Configure specific agents for different Discord channels
@@ -27,10 +24,10 @@ bun add @tokenring-ai/discord
 
 This package requires the following dependencies:
 
-- `@tokenring-ai/app` (0.2.0) - Base application framework
-- `@tokenring-ai/agent` (0.2.0) - Agent management and event handling
-- `@tokenring-ai/utility` (0.2.0) - Shared utilities and helpers
-- `@tokenring-ai/escalation` (0.2.0) - Escalation service and provider interface
+- `@tokenring-ai/app` (workspace:*) - Base application framework
+- `@tokenring-ai/agent` (workspace:*) - Agent management and event handling
+- `@tokenring-ai/utility` (workspace:*) - Shared utilities and helpers
+- `@tokenring-ai/escalation` (workspace:*) - Escalation service and provider interface
 - `discord.js` (^14.26.2) - Discord API client library
 - `zod` (^4.3.6) - Schema validation
 
@@ -104,35 +101,30 @@ constructor(
 - `client: Client` - Discord.js client instance (initialized in start())
 - `botUserId: string | undefined` - Discord user ID of the bot
 
-**Methods**:
+**Public Methods**:
 
 - `start(): Promise<void>` - Initializes and starts the Discord bot
 - `stop(): Promise<void>` - Stops the bot and cleans up resources
 - `getBotUserId(): string | undefined` - Returns the Discord user ID of the bot
-- `createCommunicationChannelWithChannel(channelName: string): CommunicationChannel` - Creates a communication channel
-  for escalation
+- `createCommunicationChannelWithChannel(channelName: string): CommunicationChannel` - Creates a communication channel for escalation
 - `createCommunicationChannelWithUser(userId: string): CommunicationChannel` - Creates a DM communication channel
 
-**Internal Methods**:
+**Private Methods**:
 
-- `handleMessage(message: Message): Promise<void>` - Processes incoming Discord messages, routing to DM or channel
-  handlers
-- `handleDirectMessage(message: Message, userId: string, channelId: string, text: string): Promise<void>` - Handles DM
-  messages with authorization checks
-- `extractAllAttachments(message: Message): Promise<InputAttachment[]>` - Downloads and processes file attachments,
-  converting to base64
-- `ensureAgentForChannel(channelId: string, agentType: string): Promise<Agent>` - Ensures an agent exists for a channel,
-  spawns if needed
-- `flushBuffer(channelId: string): Promise<void>` - Sends buffered messages to Discord, handles message editing and
-  fallback
+- `handleMessage(message: Message): Promise<void>` - Processes incoming Discord messages, routing to DM or channel handlers
+- `handleDirectMessage(message: Message, userId: string, channelId: string, text: string): Promise<void>` - Handles DM messages with authorization checks
+- `extractAllAttachments(message: Message): Promise<InputAttachment[]>` - Downloads and processes file attachments, converting to base64
+- `ensureAgentForChannel(channelId: string, agentType: string): Promise<Agent>` - Ensures an agent exists for a channel, spawns if needed
+- `flushBuffer(channelId: string): Promise<void>` - Sends buffered messages to Discord, handles message editing and fallback
 - `sendMessage(channelId: string, text: string): Promise<string>` - Sends a message to a channel, returns message ID
-- `updateMessageWithFallback(channelId: string, messageId: string, text: string): Promise<string>` - Updates existing
-  message or creates new if not found
-- `agentEventLoop(channelId: string, agent: Agent, signal: AbortSignal): Promise<void>` - Processes agent events for a
-  channel, handles chat output
+- `updateMessageWithFallback(channelId: string, messageId: string, text: string): Promise<string>` - Updates existing message or creates new if not found
+- `agentEventLoop(channelId: string, agent: Agent, signal: AbortSignal): Promise<void>` - Processes agent events for a channel, handles chat output
 - `scheduleSend(): void` - Schedules message sending with rate limiting
 - `processPending(): Promise<void>` - Processes all pending channel buffers
 - `fetchTextChannel(channelId: string): Promise<MessageCapableChannel>` - Fetches and validates text channel
+- `createTrackedChannel(destinationId: string, sendFn: (messageText: string) => Promise<string>): CommunicationChannel` - Creates a tracked communication channel for escalation
+- `handleChatOutput(channelId: string, content: string): void` - Handles chat output from agent, accumulates in buffer
+- `isMessageNotFoundError(error: unknown): boolean` - Checks if error is a Discord "unknown message" error
 
 **Key Features**:
 
@@ -159,8 +151,7 @@ constructor(config: ParsedDiscordEscalationProviderConfig)
 
 **Methods**:
 
-- `createCommunicationChannelWithUser(channelName: string, agent: Agent): Promise<CommunicationChannel>` - Creates a
-  communication channel for escalation
+- `createCommunicationChannelWithUser(channelName: string, agent: Agent): CommunicationChannel` - Creates a communication channel for escalation
 
 **Implementation**:
 
@@ -749,48 +740,60 @@ export default defineConfig({
 ### Example Test
 
 ```typescript
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   DiscordBotConfigSchema,
   DiscordEscalationProviderConfigSchema,
   DiscordServiceConfigSchema,
   type ParsedDiscordServiceConfig
-} from '../schema';
+} from "../schema";
 
-describe('Discord Service Configuration', () => {
-  it('validates a complete multi-bot config', () => {
+describe("Discord Service Configuration", () => {
+  it("validates a complete multi-bot config", () => {
     const validConfig = {
       bots: {
         primary: {
-          name: 'Primary Bot',
-          botToken: 'valid-bot-token',
-          joinMessage: 'Discord bot is online!',
+          name: "Primary Bot",
+          botToken: "valid-bot-token",
+          joinMessage: "Discord bot is online!",
           channels: {
             dev: {
-              channelId: '123456789',
-              allowedUsers: ['111111111', '222222222'],
-              agentType: 'leader'
+              channelId: "123456789",
+              allowedUsers: ["111111111", "222222222"],
+              agentType: "leader"
             }
           },
-          dmAgentType: 'personalAgent',
-          dmAllowedUsers: ['111111111']
+          dmAgentType: "personalAgent",
+          dmAllowedUsers: ["111111111"]
         }
       }
     };
 
     const result = DiscordServiceConfigSchema.safeParse(validConfig);
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({
+        ...validConfig,
+        bots: {
+          ...validConfig.bots,
+          primary: {
+            ...validConfig.bots.primary,
+            maxFileSize: 20_971_520,
+          }
+        }
+      });
+    }
   });
 
-  it('applies defaults for optional bot fields', () => {
+  it("applies defaults for optional bot fields", () => {
     const result = DiscordBotConfigSchema.parse({
-      name: 'Default Bot',
-      botToken: 'token',
+      name: "Default Bot",
+      botToken: "token",
       channels: {
         ops: {
-          channelId: '987654321',
-          agentType: 'teamLeader'
+          channelId: "987654321",
+          agentType: "teamLeader"
         }
       }
     });
@@ -798,13 +801,14 @@ describe('Discord Service Configuration', () => {
     expect(result.maxFileSize).toBe(20_971_520);
     expect(result.channels.ops.allowedUsers).toEqual([]);
     expect(result.dmAllowedUsers).toEqual([]);
+    expect(result.dmAgentType).toBeUndefined();
   });
 
-  it('validates escalation provider config', () => {
+  it("validates escalation provider config", () => {
     const providerConfig = {
-      type: 'discord',
-      bot: 'primary',
-      channel: 'admins'
+      type: "discord",
+      bot: "primary",
+      channel: "admins"
     };
 
     const result = DiscordEscalationProviderConfigSchema.safeParse(providerConfig);
@@ -815,8 +819,7 @@ describe('Discord Service Configuration', () => {
 
 ### Test File
 
-The package includes a test file at `test/configuration.test.ts` for testing configuration validation and schema
-parsing.
+The package includes a test file at `test/configuration.test.ts` for testing configuration validation and schema parsing.
 
 ## Best Practices
 

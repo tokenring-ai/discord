@@ -381,7 +381,7 @@ export default class DiscordBot {
         }
       }
     } catch (error: unknown) {
-      if (error instanceof Error && error.name !== "AbortError") {
+      if (Error.isError(error) && error.name !== "AbortError") {
         this.app.serviceError(this.discordService, "Error in channel listener:", error);
       }
     } finally {
@@ -490,7 +490,7 @@ export default class DiscordBot {
   }
 
   private isMessageNotFoundError(error: unknown): boolean {
-    if (!(error instanceof Error)) return false;
+    if (!(Error.isError(error))) return false;
     const message = error.message.toLowerCase();
     return message.includes("unknown message") || message.includes("10008");
   }
