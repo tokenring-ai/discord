@@ -189,7 +189,7 @@ export default class DiscordBot {
 
     const userId = message.author.id;
     const channelId = message.channelId;
-    const text = message.content?.trim() ?? "";
+    const text = message.content.trim();
 
     const replyToMessageId = message.reference?.messageId;
     if (replyToMessageId) {
@@ -358,7 +358,7 @@ export default class DiscordBot {
               for (const req of this.activeRequests.values()) {
                 if (req.channelId === channelId) req.responseSent = true;
               }
-              this.handleChatOutput(channelId, `\n[${event.type.split(".")[1].toUpperCase()}]: ${event.message}\n`);
+              this.handleChatOutput(channelId, `\n[${event.type.split(".")[1]!.toUpperCase()}]: ${event.message}\n`);
               break;
             }
             case "agent.response": {
@@ -439,17 +439,15 @@ export default class DiscordBot {
     const syncFrom = response.isComplete ? 0 : Math.max(0, chunks.length - 2);
 
     for (let i = syncFrom; i < chunks.length; i++) {
-      const chunk = chunks[i];
+      const chunk = chunks[i]!;
       if (chunk === response.sentTexts[i]) continue;
 
       try {
         const existingMessageId = response.messageIds[i];
         if (existingMessageId) {
-          const updatedMessageId = await this.updateMessageWithFallback(channelId, existingMessageId, chunk);
-          response.messageIds[i] = updatedMessageId;
+          response.messageIds[i] = await this.updateMessageWithFallback(channelId, existingMessageId, chunk);
         } else {
-          const postedMessageId = await this.sendMessage(channelId, chunk);
-          response.messageIds[i] = postedMessageId;
+          response.messageIds[i] = await this.sendMessage(channelId, chunk);
         }
         response.sentTexts[i] = chunk;
       } catch (error: unknown) {
@@ -490,7 +488,7 @@ export default class DiscordBot {
   }
 
   private isMessageNotFoundError(error: unknown): boolean {
-    if (!(Error.isError(error))) return false;
+    if (!Error.isError(error)) return false;
     const message = error.message.toLowerCase();
     return message.includes("unknown message") || message.includes("10008");
   }
