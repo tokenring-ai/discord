@@ -28,8 +28,8 @@ This package requires the following dependencies:
 - `@tokenring-ai/agent` (workspace:*) - Agent management and event handling
 - `@tokenring-ai/utility` (workspace:*) - Shared utilities and helpers
 - `@tokenring-ai/escalation` (workspace:*) - Escalation service and provider interface
-- `discord.js` (^14.26.2) - Discord API client library
-- `zod` (^4.3.6) - Schema validation
+- `discord.js` (^14.26.4) - Discord API client library
+- `zod` (^4.4.3) - Schema validation
 
 ## Features
 
