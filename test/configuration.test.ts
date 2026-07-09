@@ -52,7 +52,7 @@ describe("Discord Service Configuration", () => {
     });
 
     expect(result.maxFileSize).toBe(20_971_520);
-    expect(result.channels.ops.allowedUsers).toEqual([]);
+    expect(result.channels.ops!.allowedUsers).toEqual([]);
     expect(result.dmAllowedUsers).toEqual([]);
     expect(result.dmAgentType).toBeUndefined();
   });
@@ -76,7 +76,7 @@ describe("Discord Service Configuration", () => {
       }
     };
 
-    expect(config.bots.default.channels.support.channelId).toBe("123");
+    expect(config.bots.default!.channels.support!.channelId).toBe("123");
   });
 
   it("validates escalation provider config", () => {
