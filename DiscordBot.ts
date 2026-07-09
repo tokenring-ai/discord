@@ -1,5 +1,5 @@
 import { type Agent, AgentManager } from "@tokenring-ai/agent";
-import { BaseAttachmentSchema, type InputAttachment } from "@tokenring-ai/agent/AgentEvents";
+import { type InputAttachment, InputAttachmentSchema } from "@tokenring-ai/agent/AgentEvents";
 import { AgentEventState } from "@tokenring-ai/agent/state/agentEventState";
 import type TokenRingApp from "@tokenring-ai/app";
 import type { CommunicationChannel } from "@tokenring-ai/escalation/EscalationProvider";
@@ -303,7 +303,7 @@ export default class DiscordBot {
         }
         const data = await response.arrayBuffer();
 
-        const mimeType = BaseAttachmentSchema.shape.mimeType.parse(attachment.contentType);
+        const mimeType = InputAttachmentSchema.shape.mimeType.parse(attachment.contentType);
 
         attachments.push({
           type: "attachment",
