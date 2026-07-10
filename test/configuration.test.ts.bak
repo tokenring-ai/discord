@@ -14,13 +14,13 @@ describe("Discord Service Configuration", () => {
             dev: {
               channelId: "123456789",
               allowedUsers: ["111111111", "222222222"],
-              agentType: "leader",
-            },
+              agentType: "leader"
+            }
           },
           dmAgentType: "personalAgent",
-          dmAllowedUsers: ["111111111"],
-        },
-      },
+          dmAllowedUsers: ["111111111"]
+        }
+      }
     };
 
     const result = DiscordServiceConfigSchema.safeParse(validConfig);
@@ -33,8 +33,8 @@ describe("Discord Service Configuration", () => {
           primary: {
             ...validConfig.bots.primary,
             maxFileSize: 20_971_520,
-          },
-        },
+          }
+        }
       });
     }
   });
@@ -46,9 +46,9 @@ describe("Discord Service Configuration", () => {
       channels: {
         ops: {
           channelId: "987654321",
-          agentType: "teamLeader",
-        },
-      },
+          agentType: "teamLeader"
+        }
+      }
     });
 
     expect(result.maxFileSize).toBe(20_971_520);
@@ -68,12 +68,12 @@ describe("Discord Service Configuration", () => {
             support: {
               channelId: "123",
               allowedUsers: [],
-              agentType: "supportAgent",
-            },
+              agentType: "supportAgent"
+            }
           },
-          dmAllowedUsers: [],
-        },
-      },
+          dmAllowedUsers: []
+        }
+      }
     };
 
     expect(config.bots.default!.channels.support!.channelId).toBe("123");
@@ -83,7 +83,7 @@ describe("Discord Service Configuration", () => {
     const providerConfig = {
       type: "discord",
       bot: "primary",
-      channel: "admins",
+      channel: "admins"
     };
 
     const result = DiscordEscalationProviderConfigSchema.safeParse(providerConfig);
