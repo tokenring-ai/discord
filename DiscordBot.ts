@@ -1,5 +1,5 @@
 import { type Agent, AgentManager } from "@tokenring-ai/agent";
-import { type InputAttachment, InputAttachmentSchema } from "@tokenring-ai/agent/AgentEvents";
+import { type ChatAttachment, ChatAttachmentSchema } from "@tokenring-ai/agent/AgentEvents";
 import { AgentEventState } from "@tokenring-ai/agent/state/agentEventState";
 import type TokenRingApp from "@tokenring-ai/app";
 import type { CommunicationChannel } from "@tokenring-ai/escalation/EscalationProvider";
@@ -285,8 +285,8 @@ export default class DiscordBot {
     await this.flushBuffer(channelId);
   }
 
-  private async extractAllAttachments(message: Message): Promise<InputAttachment[]> {
-    const attachments: InputAttachment[] = [];
+  private async extractAllAttachments(message: Message): Promise<ChatAttachment[]> {
+    const attachments: ChatAttachment[] = [];
 
     for (const attachment of message.attachments.values()) {
       if (attachment.size > this.botConfig.maxFileSize) {
@@ -303,15 +303,13 @@ export default class DiscordBot {
         }
         const data = await response.arrayBuffer();
 
-        const mimeType = InputAttachmentSchema.shape.mimeType.parse(attachment.contentType);
+        const mimeType = ChatAttachmentSchema.shape.mimeType.parse(attachment.contentType);
 
         attachments.push({
-          type: "attachment",
           name: attachment.name || `discord_file_${attachment.id}`,
           mimeType,
           body: Buffer.from(data as ArrayBuffer).toString("base64"),
           encoding: "base64",
-          timestamp: Date.now(),
         });
       } catch (error: unknown) {
         this.app.serviceError(this.discordService, `Failed to fetch Discord attachment ${attachment.id}:`, error);
