@@ -7,7 +7,10 @@ export const DiscordEscalationBotConfigSchema = z.object({
 
 export const DiscordBotConfigSchema = z.object({
   name: z.string().meta({ description: "Display name for this bot" } satisfies ConfigFieldMeta),
-  botToken: z.string().min(1, "Bot token is required").meta({ sensitive: true, description: "Discord bot token" } satisfies ConfigFieldMeta),
+  botToken: z
+    .string()
+    .min(1, "Bot token is required")
+    .meta({ sensitive: true, description: "Discord bot token" } satisfies ConfigFieldMeta),
   joinMessage: z
     .string()
     .exactOptional()
@@ -29,7 +32,10 @@ export const DiscordBotConfigSchema = z.object({
       }),
     )
     .meta({ label: "Channels", description: "Channel-specific bot behavior, keyed by name" } satisfies ConfigFieldMeta),
-  dmAgentType: z.string().exactOptional().meta({ description: "Agent type spawned to handle direct messages" } satisfies ConfigFieldMeta),
+  dmAgentType: z
+    .string()
+    .exactOptional()
+    .meta({ description: "Agent type spawned to handle direct messages" } satisfies ConfigFieldMeta),
   dmAllowedUsers: z
     .array(z.string())
     .default([])
@@ -41,7 +47,10 @@ export type ParsedDiscordBotConfig = z.output<typeof DiscordBotConfigSchema>;
 
 export const DiscordServiceConfigSchema = z
   .object({
-    bots: z.record(z.string(), DiscordBotConfigSchema).default({}).meta({ label: "Bots", description: "Discord bots, keyed by name" } satisfies ConfigFieldMeta),
+    bots: z
+      .record(z.string(), DiscordBotConfigSchema)
+      .default({})
+      .meta({ label: "Bots", description: "Discord bots, keyed by name" } satisfies ConfigFieldMeta),
   })
   .meta({ label: "Discord", description: "Discord bot integration settings" } satisfies ConfigFieldMeta);
 export type ParsedDiscordServiceConfig = z.output<typeof DiscordServiceConfigSchema>;
