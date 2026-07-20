@@ -7,7 +7,7 @@
     "@tokenring-ai/agent": "workspace:*",
     "@tokenring-ai/utility": "workspace:*",
     "@tokenring-ai/escalation": "workspace:*",
-    "discord.js": "^14.26.4",
+    "discord.js": "^14.26.5",
     "zod": "^4.4.3"
   },
   "exports": {
@@ -18,7 +18,7 @@
   "license": "MIT",
   "type": "module",
   "devDependencies": {
-    "typescript": "^6.0.2"
+    "typescript": "^7.0.2"
   },
   "scripts": {
     "test": "bun test",
