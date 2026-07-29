@@ -1,12 +1,13 @@
 {
   "name": "@tokenring-ai/discord",
-  "description": "A TokenRing plugin providing Discord bot integration for AI-powered agent interactions through Discord.",
+  "description": "Discord transport for TokenRing bots.",
   "version": "0.2.0",
   "dependencies": {
     "@tokenring-ai/app": "workspace:*",
     "@tokenring-ai/agent": "workspace:*",
     "@tokenring-ai/utility": "workspace:*",
-    "@tokenring-ai/escalation": "workspace:*",
+    "@tokenring-ai/bot": "workspace:*",
+    "@tokenring-ai/secrets": "workspace:*",
     "discord.js": "^14.26.5",
     "zod": "^4.4.3"
   },

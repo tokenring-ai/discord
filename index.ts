@@ -1,15 +1,12 @@
-export { default as DiscordEscalationProvider } from "./DiscordEscalationProvider.ts";
-export {
-  default as DiscordBotService,
-  default as DiscordService,
-} from "./DiscordService.ts";
+export { default as DiscordMessagingProvider } from "./DiscordMessagingProvider.ts";
+export { default as DiscordService } from "./DiscordService.ts";
 export type {
-  ParsedDiscordBotConfig,
-  ParsedDiscordEscalationProviderConfig,
+  ParsedDiscordAccountConfig,
   ParsedDiscordServiceConfig,
+  ResolvedDiscordAccountConfig,
+  ResolvedDiscordServiceConfig,
 } from "./schema.ts";
 export {
-  DiscordBotConfigSchema,
-  DiscordEscalationProviderConfigSchema,
+  DiscordAccountConfigSchema,
   DiscordServiceConfigSchema,
 } from "./schema.ts";

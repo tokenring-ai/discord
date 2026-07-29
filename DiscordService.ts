@@ -1,38 +1,72 @@
 import type TokenRingApp from "@tokenring-ai/app";
-import type { TokenRingService } from "@tokenring-ai/app/types";
-import waitForAbort from "@tokenring-ai/utility/promise/waitForAbort";
+import { ConfigurationError, type TokenRingService } from "@tokenring-ai/app/types";
+import { BotService } from "@tokenring-ai/bot";
 import KeyedRegistry from "@tokenring-ai/utility/registry/KeyedRegistry";
-import DiscordBot from "./DiscordBot.ts";
-import type { ParsedDiscordServiceConfig } from "./schema.ts";
+import { deepEquals } from "bun";
+import DiscordMessagingProvider from "./DiscordMessagingProvider.ts";
+import type { ResolvedDiscordServiceConfig } from "./schema.ts";
 
 export default class DiscordService implements TokenRingService {
   readonly name = "DiscordService";
-  description = "Manages multiple Discord bots for interacting with TokenRing agents.";
+  description = "Connects Discord application accounts to the bot service.";
 
-  private bots = new KeyedRegistry<DiscordBot>();
+  private providers = new KeyedRegistry<DiscordMessagingProvider>();
+  private options: ResolvedDiscordServiceConfig = { accounts: {} };
 
-  getAvailableBots = this.bots.keysArray;
-  getBot = this.bots.get;
+  getAvailableAccounts = this.providers.keysArray;
+  getProvider = this.providers.get;
 
-  constructor(
-    private app: TokenRingApp,
-    private options: ParsedDiscordServiceConfig,
-  ) {}
+  constructor(private app: TokenRingApp) {}
 
-  async run(signal: AbortSignal): Promise<void> {
-    this.app.serviceOutput(this, "Starting Discord bots...");
+  async reconfigure(options: ResolvedDiscordServiceConfig): Promise<void> {
+    const botService = this.requireBotService();
 
-    for (const [botName, botConfig] of Object.entries(this.options.bots)) {
-      const bot = new DiscordBot(this.app, this, botName, botConfig);
-      await bot.start();
-      this.bots.set(botName, bot);
-    }
+    await this.providers.reconcileAgainstAsync(options.accounts, {
+      creating: async (accountName, accountConfig) => {
+        this.app.serviceOutput(this, `Connecting Discord account ${accountName}`);
+        const provider = new DiscordMessagingProvider(this.app, this, accountName, accountConfig);
+        await provider.start();
+        botService.registerProvider(accountName, provider);
+        return provider;
+      },
+      deleting: async (accountName, provider) => {
+        this.app.serviceOutput(this, `Stopping Discord account ${accountName}`);
+        botService.unregisterProvider(accountName);
+        await provider.stop();
+      },
+      updating: async (accountName, provider, accountConfig) => {
+        if (deepEquals(this.options.accounts[accountName], accountConfig, true)) return provider;
 
-    return waitForAbort(signal, async () => {
-      for (const [botName, bot] of this.bots.entriesArray()) {
-        await bot.stop();
-        this.bots.unregister(botName);
-      }
+        this.app.serviceOutput(this, `Reconnecting Discord account ${accountName}`);
+        botService.unregisterProvider(accountName);
+        await provider.stop();
+
+        const next = new DiscordMessagingProvider(this.app, this, accountName, accountConfig);
+        await next.start();
+        botService.registerProvider(accountName, next);
+        return next;
+      },
     });
+    this.options = options;
+  }
+
+  async stop(): Promise<void> {
+    const botService = this.app.getService(BotService);
+    for (const [accountName, provider] of this.providers.entriesArray()) {
+      botService?.unregisterProvider(accountName);
+      await provider.stop();
+      this.providers.unregister(accountName);
+    }
+  }
+
+  private requireBotService(): BotService {
+    const botService = this.app.getService(BotService);
+    if (!botService) {
+      throw new ConfigurationError(
+        this.name,
+        "Discord accounts are configured but the @tokenring-ai/bot plugin is not installed, so there is nothing to connect them to",
+      );
+    }
+    return botService;
   }
 }

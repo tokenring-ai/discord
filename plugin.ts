@@ -1,59 +1,37 @@
+import { AgentCommandService } from "@tokenring-ai/agent";
 import type { TokenRingPlugin } from "@tokenring-ai/app";
-import { EscalationService } from "@tokenring-ai/escalation";
-import { stripUndefinedKeys } from "@tokenring-ai/utility/object/stripObject";
+import { requireSecret } from "@tokenring-ai/secrets/SecretService";
 import { z } from "zod";
+import agentCommands from "./commands.ts";
 import DiscordService from "./DiscordService.ts";
-import { DiscordEscalationProvider } from "./index.ts";
 import packageJSON from "./package.json" with { type: "json" };
-import { DiscordServiceConfigSchema, type ParsedDiscordBotConfig } from "./schema.ts";
+import { DiscordServiceConfigSchema, type ResolvedDiscordAccountConfig } from "./schema.ts";
 
 const packageConfigSchema = z.object({
-  discord: DiscordServiceConfigSchema.prefault({ bots: {} }),
+  discord: DiscordServiceConfigSchema.prefault({ accounts: {} }),
 });
-
-function addBotsFromEnv(bots: Record<string, Partial<ParsedDiscordBotConfig>>) {
-  for (const [key, value] of Object.entries(process.env)) {
-    const match = key.match(/^DISCORD_BOT_TOKEN(\d*)$/);
-    if (!match || !value) continue;
-    const n = match[1];
-    const name = process.env[`DISCORD_BOT_NAME${n}`] ?? `Discord Bot${n ? ` ${n}` : ""}`;
-
-    const escalationChannel = process.env[`DISCORD_ESCALATION_CHANNEL${n}`];
-
-    bots[name] = stripUndefinedKeys({
-      name,
-      botToken: value,
-      escalation: escalationChannel ? { channel: escalationChannel } : undefined,
-      channels: {},
-    });
-  }
-}
 
 export default {
   name: packageJSON.name,
   displayName: "Discord Integration",
   version: packageJSON.version,
   description: packageJSON.description,
-  install(app, config) {
-    addBotsFromEnv(config.discord.bots);
-    if (Object.keys(config.discord.bots).length === 0) return;
-
-    app.addServices(new DiscordService(app, DiscordServiceConfigSchema.parse(config.discord)));
-
-    app.waitForService(EscalationService, escalationService => {
-      for (const [botName, bot] of Object.entries(config.discord.bots)) {
-        if (bot.escalation) {
-          escalationService.registerProvider(
-            botName,
-            new DiscordEscalationProvider({
-              type: "discord",
-              bot: botName,
-              channel: bot.escalation.channel,
-            }),
-          );
-        }
-      }
+  install(app) {
+    app.addServices(new DiscordService(app));
+    app.waitForService(AgentCommandService, commandService => {
+      commandService.addAgentCommands(agentCommands);
     });
   },
-  config: packageConfigSchema,
+  async reconfigure(app, config) {
+    const resolvedAccounts: Record<string, ResolvedDiscordAccountConfig> = {};
+    for (const [accountName, account] of Object.entries(config.discord.accounts)) {
+      resolvedAccounts[accountName] = {
+        ...account,
+        botToken: requireSecret(app, account.botToken, `Discord account "${accountName}" bot token`),
+      };
+    }
+
+    await app.requireService(DiscordService).reconfigure({ accounts: resolvedAccounts });
+  },
+  configSchema: packageConfigSchema,
 } satisfies TokenRingPlugin<typeof packageConfigSchema>;
